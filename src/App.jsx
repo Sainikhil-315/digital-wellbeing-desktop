@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard.jsx'
 import AppLimits from './components/AppLimits.jsx'
 import FocusMode from './components/FocusMode.jsx'
 import WeeklyReport from './components/WeeklyReport.jsx'
+import UpdateBanner from './components/UpdateBanner.jsx'
 
 const api = window.electronAPI || {
   getTodayUsage: async () => [],
@@ -104,6 +105,8 @@ export default function App() {
               </div>
             </div>
           )}
+
+          <UpdateBanner />
         </aside>
 
         {/* Content */}

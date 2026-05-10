@@ -1,0 +1,119 @@
+.update-banner {
+  margin: 8px 8px 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-bright);
+  background: var(--bg-raised);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  width: calc(100% - 16px);
+  cursor: default;
+  transition: background 0.15s, border-color 0.15s;
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Downloading state ── */
+.update-banner--downloading {
+  border-color: var(--border);
+}
+.update-icon {
+  font-size: 15px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Ready state ── */
+.update-banner--ready {
+  background: #141a12;
+  border-color: rgba(92, 158, 46, 0.35);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.update-banner--ready:hover {
+  background: #192016;
+  border-color: rgba(92, 158, 46, 0.6);
+}
+
+.update-leaf {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--green-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--green);
+}
+
+.update-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.update-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.update-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.update-arrow {
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.update-banner--ready:hover .update-arrow {
+  transform: translateX(2px);
+  color: var(--green);
+}
+
+/* Progress bar inside downloading banner */
+.update-prog-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--bg-hover);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  overflow: hidden;
+}
+.update-banner--downloading {
+  position: relative;
+}
+.update-prog-bar {
+  height: 100%;
+  background: var(--green);
+  transition: width 0.4s ease;
+}
+
+/* Spinner for "available" state */
+.update-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-bright);
+  border-top-color: var(--text-muted);
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
