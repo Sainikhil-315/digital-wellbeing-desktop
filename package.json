@@ -6,18 +6,19 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build && electron-builder",
-    "release": "vite build && electron-builder --publish always",
+    "release": "node build-release.js",
     "electron": "electron .",
     "vite": "vite",
     "postinstall": "node scripts/copy-wasm.js"
   },
   "dependencies": {
-    "sql.js": "^1.11.0",
-    "electron-updater": "^6.1.8"
+    "electron-updater": "^6.1.8",
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
+    "dotenv": "^16.6.1",
     "electron": "^29.1.0",
     "electron-builder": "^24.13.3",
     "react": "^18.2.0",
@@ -28,9 +29,18 @@
   "build": {
     "appId": "com.digitalwellbeing.app",
     "productName": "Digital Wellbeing",
-    "directories": { "output": "dist-electron" },
+    "directories": {
+      "output": "dist-electron"
+    },
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
@@ -39,7 +49,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
-    "files": ["dist/**/*", "electron/**/*", "assets/**/*"],
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "assets/**/*"
+    ],
     "publish": {
       "provider": "github",
       "owner": "Sainikhil-315",
