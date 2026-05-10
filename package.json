@@ -43,7 +43,7 @@
     "publish": {
       "provider": "github",
       "owner": "Sainikhil-315",
-      "repo": "digital-wellbeing"
+      "repo": "digital-wellbeing-desktop"
     }
   }
 }
