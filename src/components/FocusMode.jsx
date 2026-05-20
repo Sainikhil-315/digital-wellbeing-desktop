@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './FocusMode.css'
 
 const MODES = [
-  { id: 'pomodoro',    label: 'Pomodoro',    mins: 25, color: '#E24B4A' },
-  { id: 'short',       label: 'Short Break', mins: 5,  color: '#5C9E2E' },
-  { id: 'long',        label: 'Long Break',  mins: 15, color: '#4B8FE2' },
+  { id: 'pomodoro',  label: 'Pomodoro',    mins: 25, color: '#E24B4A' },
+  { id: 'short',     label: 'Short Break', mins: 5,  color: '#5C9E2E' },
+  { id: 'long',      label: 'Long Break',  mins: 15, color: '#4B8FE2' },
 ]
 
 const RADIUS = 80
@@ -21,11 +21,17 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
   const [seconds, setSeconds] = useState(MODES[0].mins * 60)
   const [total, setTotal] = useState(MODES[0].mins * 60)
   const [running, setRunning] = useState(false)
+  const [started, setStarted] = useState(false)  // tracks if timer was ever started
   const [sessions, setSessions] = useState([])
   const [label, setLabel] = useState('')
   const [editingLabel, setEditingLabel] = useState(false)
   const intervalRef = useRef(null)
   const startTimeRef = useRef(null)
+  const secondsRef = useRef(seconds)  // ref to avoid stale closure
+  const totalRef = useRef(total)
+
+  useEffect(() => { secondsRef.current = seconds }, [seconds])
+  useEffect(() => { totalRef.current = total }, [total])
 
   const mode = MODES[modeIdx]
   const pct = seconds / total
@@ -39,19 +45,46 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [])
 
+  const handleComplete = useCallback(async (finalSeconds) => {
+    const now = Date.now()
+    const start = startTimeRef.current || now - totalRef.current * 1000
+    const elapsed = totalRef.current - (finalSeconds ?? secondsRef.current)
+    const dur = elapsed > 0 ? elapsed : totalRef.current
+
+    const session = {
+      label: label || mode.label,
+      start_time: start,
+      end_time: now,
+      duration_seconds: dur,
+      completed: 1
+    }
+    await api.saveSession(session)
+    onRefresh()
+    setSessions(prev => [session, ...prev])
+    // Reset after saving
+    const t = mode.mins * 60
+    setSeconds(t)
+    setTotal(t)
+    setRunning(false)
+    setStarted(false)
+  }, [label, mode, api, onRefresh])
+
   function startStop() {
     if (running) {
       clearInterval(intervalRef.current)
       setRunning(false)
     } else {
-      startTimeRef.current = Date.now()
+      if (!started) {
+        startTimeRef.current = Date.now()
+        setStarted(true)
+      }
       setRunning(true)
       intervalRef.current = setInterval(() => {
         setSeconds(prev => {
           if (prev <= 1) {
             clearInterval(intervalRef.current)
             setRunning(false)
-            handleComplete()
+            handleComplete(0)
             return 0
           }
           return prev - 1
@@ -63,31 +96,16 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
   function reset() {
     clearInterval(intervalRef.current)
     setRunning(false)
+    setStarted(false)
     const t = mode.mins * 60
     setSeconds(t)
     setTotal(t)
   }
 
-  async function handleComplete() {
-    const now = Date.now()
-    const start = startTimeRef.current || now - total * 1000
-    const dur = total - seconds
-    const session = {
-      label: label || mode.label,
-      start_time: start,
-      end_time: now,
-      duration_seconds: dur > 0 ? dur : total,
-      completed: 1
-    }
-    await api.saveSession(session)
-    onRefresh()
-    setSessions(prev => [session, ...prev])
-    reset()
-  }
-
   function switchMode(idx) {
     clearInterval(intervalRef.current)
     setRunning(false)
+    setStarted(false)
     setModeIdx(idx)
     const t = MODES[idx].mins * 60
     setSeconds(t)
@@ -102,7 +120,6 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
   return (
     <div className="focus-mode">
       <div className="focus-main">
-        {/* Mode tabs */}
         <div className="mode-tabs">
           {MODES.map((m, i) => (
             <button
@@ -116,7 +133,6 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
           ))}
         </div>
 
-        {/* Timer ring */}
         <div className="timer-wrap">
           <svg width="200" height="200" viewBox="0 0 200 200">
             <circle cx="100" cy="100" r={RADIUS} fill="none" stroke="var(--bg-raised)" strokeWidth="8" />
@@ -155,7 +171,6 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
           </div>
         </div>
 
-        {/* Controls */}
         <div className="timer-controls">
           <button className="ctrl-btn" onClick={reset} title="Reset">
             <i className="ti ti-refresh" />
@@ -164,13 +179,13 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
             <i className={`ti ${running ? 'ti-player-pause-filled' : 'ti-player-play-filled'}`} />
             {running ? 'Pause' : 'Start'}
           </button>
-          <button className="ctrl-btn" onClick={handleComplete} title="Mark done" disabled={!running && seconds === total}>
+          {/* Only enabled once timer has actually started */}
+          <button className="ctrl-btn" onClick={() => handleComplete()} title="Mark done" disabled={!started}>
             <i className="ti ti-check" />
           </button>
         </div>
       </div>
 
-      {/* Sessions list */}
       <div className="sessions-panel card">
         <div className="card-title">Today's sessions</div>
         {sessions.length === 0 ? (

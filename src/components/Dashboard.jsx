@@ -17,17 +17,25 @@ function appColor(appName, index) {
 export default function Dashboard({ api, refreshKey }) {
   const [stats, setStats] = useState(null)
   const [usage, setUsage] = useState([])
+  const [hourly, setHourly] = useState(new Array(24).fill(0))
   const [loading, setLoading] = useState(true)
   const hourlyRef = useRef(null)
-  const chartRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
       try {
-        const [s, u] = await Promise.all([api.getStats(), api.getTodayUsage()])
-        if (!cancelled) { setStats(s); setUsage(u) }
+        const [s, u, h] = await Promise.all([
+          api.getStats(),
+          api.getTodayUsage(),
+          api.getHourlyUsage ? api.getHourlyUsage() : Promise.resolve(new Array(24).fill(0))
+        ])
+        if (!cancelled) {
+          setStats(s)
+          setUsage(u)
+          setHourly(h || new Array(24).fill(0))
+        }
       } catch(e) {}
       if (!cancelled) setLoading(false)
     }
@@ -35,7 +43,6 @@ export default function Dashboard({ api, refreshKey }) {
     return () => { cancelled = true }
   }, [refreshKey])
 
-  // Draw hourly chart via canvas
   useEffect(() => {
     const canvas = hourlyRef.current
     if (!canvas) return
@@ -46,43 +53,44 @@ export default function Dashboard({ api, refreshKey }) {
     const w = canvas.offsetWidth
     const h = canvas.offsetHeight
 
-    // Generate pseudo-hourly data from today total
-    const totalH = stats ? stats.today_seconds / 3600 : 0
-    const now = new Date().getHours()
-    const hourly = Array.from({length: 24}, (_, i) => {
-      if (i > now) return 0
-      const base = i >= 9 && i <= 22 ? (Math.sin((i-9) * 0.4) + 0.2) : 0.05
-      return Math.max(0, base * (totalH / 8) + (Math.random() * 0.15))
-    })
-
     ctx.clearRect(0, 0, w, h)
     const barW = (w / 24) - 2
-    const maxV = Math.max(...hourly, 0.1)
+    const maxV = Math.max(...hourly, 1)
+    const now = new Date().getHours()
+
     hourly.forEach((v, i) => {
-      const bh = (v / maxV) * (h - 16)
+      const bh = Math.max((v / maxV) * (h - 16), v > 0 ? 3 : 0)
       const x = i * (w / 24) + 1
-      const y = h - bh
-      ctx.fillStyle = v > maxV * 0.7 ? '#E24B4A' : '#333230'
+      const y = h - bh - 12  // leave room for labels
+
+      if (i > now) {
+        ctx.fillStyle = '#1e1e1e'
+      } else if (v > maxV * 0.7) {
+        ctx.fillStyle = '#E24B4A'
+      } else if (v > 0) {
+        ctx.fillStyle = '#333230'
+      } else {
+        ctx.fillStyle = '#1e1e1e'
+      }
+
       ctx.beginPath()
       ctx.roundRect(x, y, barW, bh, 2)
       ctx.fill()
     })
 
-    // Hour labels
     ctx.fillStyle = '#4A4845'
     ctx.font = `9px 'Space Mono'`
     ctx.textAlign = 'center'
     ;[0, 6, 12, 18, 23].forEach(i => {
       const label = i === 0 ? '12a' : i < 12 ? `${i}a` : i === 12 ? '12p' : `${i-12}p`
-      ctx.fillText(label, i * (w / 24) + barW/2, h)
+      ctx.fillText(label, i * (w / 24) + barW / 2, h - 2)
     })
-  }, [stats])
+  }, [hourly])
 
   const maxUsage = usage.length ? usage[0].total_seconds : 1
 
   return (
     <div className="dashboard">
-      {/* Metric cards */}
       <div className="metrics-row">
         {[
           { label: 'Today', val: fmtSeconds(stats?.today_seconds), sub: stats?.today_seconds > stats?.weekly_avg_seconds ? '↑ above avg' : '↓ below avg', subClass: stats?.today_seconds > stats?.weekly_avg_seconds ? 'bad' : 'good' },
@@ -99,7 +107,6 @@ export default function Dashboard({ api, refreshKey }) {
       </div>
 
       <div className="dash-grid">
-        {/* Top apps */}
         <div className="card">
           <div className="card-title">Top apps — today</div>
           {loading ? (
@@ -126,7 +133,6 @@ export default function Dashboard({ api, refreshKey }) {
           )}
         </div>
 
-        {/* Hourly heatmap */}
         <div className="card">
           <div className="card-title">Hourly activity</div>
           <div className="hourly-wrap">

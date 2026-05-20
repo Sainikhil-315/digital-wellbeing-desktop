@@ -12,10 +12,8 @@ if (!process.env.GH_TOKEN) {
 console.log('✓ GH_TOKEN is set, proceeding with build and release...');
 
 try {
-  execSync('vite build && electron-builder --publish always', {
-    stdio: 'inherit',
-    env: { ...process.env }
-  });
+  execSync('vite build', { stdio: 'inherit', env: { ...process.env } });
+  execSync('electron-builder --publish always', { stdio: 'inherit', env: { ...process.env } });
 } catch (error) {
   process.exit(1);
 }

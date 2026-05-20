@@ -6,7 +6,6 @@ let db = null
 let dbPath = null
 let SQL = null
 
-// Persist db to disk every 10 seconds and on write ops
 let persistTimer = null
 
 function persist() {
@@ -55,7 +54,8 @@ async function init() {
       limit_seconds INTEGER NOT NULL,
       is_productive INTEGER DEFAULT 0,
       notified_warn INTEGER DEFAULT 0,
-      notified_exceeded INTEGER DEFAULT 0
+      notified_exceeded INTEGER DEFAULT 0,
+      last_notified_date TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS focus_sessions (
@@ -69,13 +69,39 @@ async function init() {
 
     CREATE INDEX IF NOT EXISTS idx_usage_date ON usage_log(date);
     CREATE INDEX IF NOT EXISTS idx_usage_app ON usage_log(app_name);
+    CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage_log(timestamp);
   `)
 
-  // Periodic persist every 30s
+  // Add last_notified_date column to existing DBs that don't have it
+  try {
+    db.run(`ALTER TABLE app_limits ADD COLUMN last_notified_date TEXT DEFAULT ''`)
+  } catch (e) { /* column already exists, ignore */ }
+
   setInterval(persist, 30000)
+  // Reset notification flags at midnight daily
+  setInterval(resetDailyNotifications, 60 * 1000)
+  resetDailyNotifications()
 }
 
-// sql.js helper: run a SELECT and return rows as array of objects
+function today() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+// Resets warn/exceeded flags for any app whose last_notified_date != today
+function resetDailyNotifications() {
+  if (!db) return
+  try {
+    db.run(
+      `UPDATE app_limits SET notified_warn = 0, notified_exceeded = 0, last_notified_date = ?
+       WHERE last_notified_date != ?`,
+      [today(), today()]
+    )
+    schedulePersist()
+  } catch (e) {
+    console.error('Reset notifications error:', e)
+  }
+}
+
 function query(sql, params = []) {
   if (!db) return []
   try {
@@ -93,7 +119,6 @@ function query(sql, params = []) {
   }
 }
 
-// sql.js helper: run INSERT/UPDATE/DELETE
 function run(sql, params = []) {
   if (!db) return
   try {
@@ -102,10 +127,6 @@ function run(sql, params = []) {
   } catch (e) {
     console.error('DB run error:', e, sql)
   }
-}
-
-function today() {
-  return new Date().toISOString().slice(0, 10)
 }
 
 function recordUsage(appName) {
@@ -124,24 +145,42 @@ function getTodayUsage() {
   `, [today()])
 }
 
-function getWeeklyUsage() {
+// Returns hourly breakdown for today using local timestamps
+function getHourlyUsage() {
   const rows = query(`
-    SELECT date, SUM(duration_seconds) as total_seconds
+    SELECT timestamp, duration_seconds
     FROM usage_log
-    WHERE date >= date('now', '-6 days')
-    GROUP BY date
-    ORDER BY date ASC
-  `)
+    WHERE date = ?
+  `, [today()])
 
-  const result = []
+  const hourly = new Array(24).fill(0)
+  for (const row of rows) {
+    const hour = new Date(Number(row.timestamp)).getHours()
+    hourly[hour] += Number(row.duration_seconds)
+  }
+  return hourly  // array of 24 values (seconds per hour)
+}
+
+function getWeeklyUsage() {
+  // Build last 7 days using local dates (not SQLite's UTC date())
+  const days = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
-    const dateStr = d.toISOString().slice(0, 10)
-    const found = rows.find(r => r.date === dateStr)
-    result.push({ date: dateStr, total_seconds: found ? Number(found.total_seconds) : 0 })
+    days.push(d.toISOString().slice(0, 10))
   }
-  return result
+
+  const rows = query(`
+    SELECT date, SUM(duration_seconds) as total_seconds
+    FROM usage_log
+    WHERE date >= ?
+    GROUP BY date
+  `, [days[0]])
+
+  return days.map(dateStr => {
+    const found = rows.find(r => r.date === dateStr)
+    return { date: dateStr, total_seconds: found ? Number(found.total_seconds) : 0 }
+  })
 }
 
 function getLimits() {
@@ -157,6 +196,8 @@ function getLimitsWithUsage() {
       ...l,
       limit_seconds: Number(l.limit_seconds),
       is_productive: Number(l.is_productive),
+      notified_warn: Number(l.notified_warn),
+      notified_exceeded: Number(l.notified_exceeded),
       used_seconds: used ? Number(used.total_seconds) : 0
     }
   })
@@ -164,9 +205,11 @@ function getLimitsWithUsage() {
 
 function setLimit(app_name, limit_seconds, is_productive = 0) {
   run(`
-    INSERT INTO app_limits (app_name, limit_seconds, is_productive)
-    VALUES (?, ?, ?)
-    ON CONFLICT(app_name) DO UPDATE SET limit_seconds=excluded.limit_seconds, is_productive=excluded.is_productive
+    INSERT INTO app_limits (app_name, limit_seconds, is_productive, last_notified_date)
+    VALUES (?, ?, ?, '')
+    ON CONFLICT(app_name) DO UPDATE SET
+      limit_seconds = excluded.limit_seconds,
+      is_productive = excluded.is_productive
   `, [app_name, limit_seconds, is_productive ? 1 : 0])
   return { ok: true }
 }
@@ -178,7 +221,7 @@ function removeLimit(app_name) {
 
 function markNotified(app_name, type) {
   const col = type === 'exceeded' ? 'notified_exceeded' : 'notified_warn'
-  run(`UPDATE app_limits SET ${col} = 1 WHERE app_name = ?`, [app_name])
+  run(`UPDATE app_limits SET ${col} = 1, last_notified_date = ? WHERE app_name = ?`, [today(), app_name])
 }
 
 function getSessions() {
@@ -205,8 +248,14 @@ function getStats() {
   const todayRows = query('SELECT SUM(duration_seconds) as total FROM usage_log WHERE date = ?', [today()])
   const todayTotal = todayRows[0]?.total || 0
 
-  const weekRows = query("SELECT SUM(duration_seconds) as total FROM usage_log WHERE date >= date('now', '-6 days')")
-  const weekDayRows = query("SELECT COUNT(DISTINCT date) as days FROM usage_log WHERE date >= date('now', '-6 days')")
+  const days = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    days.push(d.toISOString().slice(0, 10))
+  }
+  const weekRows = query(`SELECT SUM(duration_seconds) as total FROM usage_log WHERE date >= ?`, [days[0]])
+  const weekDayRows = query(`SELECT COUNT(DISTINCT date) as days FROM usage_log WHERE date >= ?`, [days[0]])
   const weekTotal = weekRows[0]?.total || 0
   const weekDays = weekDayRows[0]?.days || 1
   const weekAvg = weekDays > 0 ? Math.round(weekTotal / weekDays) : 0
@@ -229,4 +278,8 @@ function getStats() {
   }
 }
 
-module.exports = { init, recordUsage, getTodayUsage, getWeeklyUsage, getLimits, getLimitsWithUsage, setLimit, removeLimit, markNotified, getSessions, saveSession, getStats }
+module.exports = {
+  init, recordUsage, getTodayUsage, getHourlyUsage, getWeeklyUsage,
+  getLimits, getLimitsWithUsage, setLimit, removeLimit, markNotified,
+  getSessions, saveSession, getStats
+}

@@ -3,10 +3,6 @@ const { platform } = require('os')
 
 const os = platform()
 
-/**
- * Poll the currently active/foreground application name.
- * Calls callback(appName) with a cleaned app name string.
- */
 function pollActiveWindow(callback) {
   if (os === 'win32') {
     pollWindows(callback)
@@ -17,26 +13,33 @@ function pollActiveWindow(callback) {
   }
 }
 
-// ─── Windows ────────────────────────────────────────────────────────────────
-// Uses PowerShell to get the foreground window process name
-const WIN_SCRIPT = `
-$proc = Get-Process | Where-Object {$_.MainWindowHandle -eq (Add-Type -MemberDefinition '
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-' -Name WinAPI -Namespace Win32 -PassThru)::GetForegroundWindow() } | Select-Object -First 1
-if ($proc) { Write-Output $proc.ProcessName } else { Write-Output "" }
-`.trim()
-
+// Uses GetForegroundWindow via PowerShell + .NET interop — actually gets the focused window
 function pollWindows(callback) {
-  // Simpler, faster approach: get foreground process via Get-Process + MainWindowHandle check
   const script = `
-(Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Sort-Object CPU -Descending | Select-Object -First 1).ProcessName
+Add-Type @"
+  using System;
+  using System.Runtime.InteropServices;
+  using System.Diagnostics;
+  public class WinUtil {
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(IntPtr hWnd, out int lpdwProcessId);
+    public static string GetForegroundProcessName() {
+      int pid = 0;
+      GetWindowThreadProcessId(GetForegroundWindow(), out pid);
+      try { return Process.GetProcessById(pid).ProcessName; } catch { return ""; }
+    }
+  }
+"@ -Language CSharp 2>$null
+[WinUtil]::GetForegroundProcessName()
 `.trim()
 
-  exec(`powershell -NoProfile -NonInteractive -Command "${script}"`, { timeout: 4000 }, (err, stdout) => {
-    if (err || !stdout.trim()) return
-    const raw = stdout.trim()
-    callback(cleanWindowsProcessName(raw))
-  })
+  exec(`powershell -NoProfile -NonInteractive -Command "${script.replace(/"/g, '\\"')}"`,
+    { timeout: 4000 },
+    (err, stdout) => {
+      if (err || !stdout.trim()) return
+      callback(cleanWindowsProcessName(stdout.trim()))
+    }
+  )
 }
 
 function cleanWindowsProcessName(name) {
@@ -45,15 +48,14 @@ function cleanWindowsProcessName(name) {
     'firefox': 'Firefox',
     'msedge': 'Microsoft Edge',
     'code': 'VS Code',
-    'Code': 'VS Code',
-    'WindowsTerminal': 'Windows Terminal',
+    'windowsterminal': 'Windows Terminal',
     'notepad': 'Notepad',
     'explorer': 'File Explorer',
     'slack': 'Slack',
     'discord': 'Discord',
     'spotify': 'Spotify',
     'vlc': 'VLC',
-    'Teams': 'Microsoft Teams',
+    'teams': 'Microsoft Teams',
     'zoom': 'Zoom',
     'photoshop': 'Photoshop',
     'figma': 'Figma',
@@ -62,13 +64,11 @@ function cleanWindowsProcessName(name) {
   }
   const lower = name.toLowerCase()
   for (const [key, val] of Object.entries(map)) {
-    if (lower.includes(key.toLowerCase())) return val
+    if (lower.includes(key)) return val
   }
-  // Title-case the raw name
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
 
-// ─── macOS ───────────────────────────────────────────────────────────────────
 function pollMacOS(callback) {
   exec(
     `osascript -e 'tell application "System Events" to get name of first process whose frontmost is true'`,
@@ -80,12 +80,12 @@ function pollMacOS(callback) {
   )
 }
 
-// ─── Linux ───────────────────────────────────────────────────────────────────
 function pollLinux(callback) {
   exec('xdotool getactivewindow getwindowname', { timeout: 4000 }, (err, stdout) => {
     if (err || !stdout.trim()) return
-    // Get just the app name from window title (last part after ' - ')
-    const parts = stdout.trim().split(' - ')
+    const title = stdout.trim()
+    // Try to extract app name: last segment after ' — ' or ' - '
+    const parts = title.split(/ [—\-] /)
     callback(parts[parts.length - 1].trim())
   })
 }
