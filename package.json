@@ -1,6 +1,6 @@
 {
   "name": "digital-wellbeing",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Desktop screen time tracker and focus tool",
   "main": "electron/main.js",
   "scripts": {
@@ -12,6 +12,7 @@
     "postinstall": "node scripts/copy-wasm.js"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.44.0",
     "electron-updater": "^6.1.8",
     "sql.js": "^1.11.0"
   },
