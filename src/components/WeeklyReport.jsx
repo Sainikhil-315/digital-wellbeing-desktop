@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { IconTrendingUp, IconChartBar, IconFlame, IconLeaf, IconTarget, IconCalendarCheck } from '@tabler/icons-react'
 import './WeeklyReport.css'
 
 function fmtSeconds(s) {
@@ -75,37 +76,37 @@ export default function WeeklyReport({ api, refreshKey }) {
       {/* Insight cards */}
       <div className="insights-grid">
         <div className="card insight-card">
-          <i className="ti ti-trending-up insight-icon" />
+          <IconTrendingUp size={24} className="insight-icon" />
           <div className="insight-title">Weekly total</div>
           <div className="insight-val mono">{fmtSeconds(totalSecs)}</div>
           <div className="insight-desc">across {weekly.filter(d=>d.total_seconds>0).length} tracked days</div>
         </div>
         <div className="card insight-card">
-          <i className="ti ti-chart-bar insight-icon" />
+          <IconChartBar size={24} className="insight-icon" />
           <div className="insight-title">Daily average</div>
           <div className="insight-val mono">{fmtSeconds(avgSecs)}</div>
           <div className="insight-desc">per active day</div>
         </div>
         <div className="card insight-card" style={peakDay ? {borderColor:'var(--red-dim)'} : {}}>
-          <i className="ti ti-flame insight-icon" style={{color:'var(--red)'}} />
+          <IconFlame size={24} className="insight-icon" style={{color:'var(--red)'}} />
           <div className="insight-title">Peak day</div>
           <div className="insight-val mono">{peakDay ? dayLabel(peakDay.date) : '—'}</div>
           <div className="insight-desc">{peakDay ? fmtSeconds(peakDay.total_seconds) : 'No data yet'}</div>
         </div>
         <div className="card insight-card" style={bestDay ? {borderColor:'var(--green-dim)'} : {}}>
-          <i className="ti ti-leaf insight-icon" style={{color:'var(--green)'}} />
+          <IconLeaf size={24} className="insight-icon" style={{color:'var(--green)'}} />
           <div className="insight-title">Best day</div>
           <div className="insight-val mono">{bestDay ? dayLabel(bestDay.date) : '—'}</div>
           <div className="insight-desc">{bestDay ? fmtSeconds(bestDay.total_seconds) : 'No data yet'}</div>
         </div>
         <div className="card insight-card">
-          <i className="ti ti-target insight-icon" />
+          <IconTarget size={24} className="insight-icon" />
           <div className="insight-title">Top app today</div>
           <div className="insight-val mono">{topApps[0]?.app_name || '—'}</div>
           <div className="insight-desc">{topApps[0] ? fmtSeconds(topApps[0].total_seconds) : 'No data'}</div>
         </div>
         <div className="card insight-card">
-          <i className="ti ti-calendar-check insight-icon" style={{color:'var(--blue)'}} />
+          <IconCalendarCheck size={24} className="insight-icon" style={{color:'var(--blue)'}} />
           <div className="insight-title">Days tracked</div>
           <div className="insight-val mono">{weekly.filter(d=>d.total_seconds>0).length} / 7</div>
           <div className="insight-desc">days with usage data</div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { IconDownload, IconLeaf, IconArrowRight } from '@tabler/icons-react'
 import './UpdateBanner.css'
 
 /**
@@ -28,7 +29,7 @@ export default function UpdateBanner() {
   if (update.status === 'available') {
     return (
       <div className="update-banner update-banner--downloading">
-        <i className="ti ti-download update-icon" />
+        <IconDownload size={18} className="update-icon" />
         <div className="update-text">
           <span className="update-label">Update found</span>
           <span className="update-sub">v{update.version} · downloading…</span>
@@ -41,7 +42,7 @@ export default function UpdateBanner() {
   if (update.status === 'downloading') {
     return (
       <div className="update-banner update-banner--downloading">
-        <i className="ti ti-download update-icon" />
+        <IconDownload size={18} className="update-icon" />
         <div className="update-text">
           <span className="update-label">Downloading update</span>
           <span className="update-sub">{update.percent}%</span>
@@ -61,13 +62,13 @@ export default function UpdateBanner() {
         title={`Relaunch to install v${update.version}`}
       >
         <div className="update-leaf">
-          <i className="ti ti-leaf" />
+          <IconLeaf size={18} />
         </div>
         <div className="update-text">
           <span className="update-label">Relaunch to update</span>
           <span className="update-sub">v{update.version} ready</span>
         </div>
-        <i className="ti ti-arrow-right update-arrow" />
+        <IconArrowRight size={18} className="update-arrow" />
       </button>
     )
   }

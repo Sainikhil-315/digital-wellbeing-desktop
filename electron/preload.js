@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.invoke('window-maximize'),
   windowClose:    () => ipcRenderer.invoke('window-close'),
 
+  startFocusMode: (apps) => ipcRenderer.invoke('start-focus-mode', { apps }),
+  stopFocusMode:  () => ipcRenderer.invoke('stop-focus-mode'),
+
   onUpdateStatus: (callback) => {
     const handler = (_, data) => callback(data)
     ipcRenderer.on('update-status', handler)

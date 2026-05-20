@@ -1,4 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
+import {
+  IconLayoutDashboard,
+  IconClockPause,
+  IconFocus2,
+  IconCalendarStats,
+  IconMinus,
+  IconCopy,
+  IconX
+} from '@tabler/icons-react'
 import './App.css'
 import Dashboard from './components/Dashboard.jsx'
 import AppLimits from './components/AppLimits.jsx'
@@ -21,10 +30,10 @@ const api = window.electronAPI || {
 }
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard',     icon: 'ti-layout-dashboard' },
-  { id: 'limits',    label: 'App Limits',    icon: 'ti-clock-pause' },
-  { id: 'focus',     label: 'Focus Mode',    icon: 'ti-focus-2' },
-  { id: 'weekly',    label: 'Weekly Report', icon: 'ti-calendar-stats' },
+  { id: 'dashboard', label: 'Dashboard',     icon: IconLayoutDashboard },
+  { id: 'limits',    label: 'App Limits',    icon: IconClockPause },
+  { id: 'focus',     label: 'Focus Mode',    icon: IconFocus2 },
+  { id: 'weekly',    label: 'Weekly Report', icon: IconCalendarStats },
 ]
 
 export default function App() {
@@ -58,13 +67,13 @@ export default function App() {
         </div>
         <div className="titlebar-controls">
           <button onClick={() => api.windowMinimize()} className="wbtn" title="Minimize">
-            <i className="ti ti-minus" />
+            <IconMinus size={16} />
           </button>
           <button onClick={() => api.windowMaximize()} className="wbtn" title="Maximize">
-            <i className="ti ti-copy" style={{transform:'scaleX(-1)'}} />
+            <IconCopy size={16} style={{transform:'scaleX(-1)'}} />
           </button>
           <button onClick={() => api.windowClose()} className="wbtn wbtn-close" title="Close">
-            <i className="ti ti-x" />
+            <IconX size={16} />
           </button>
         </div>
       </div>
@@ -73,19 +82,22 @@ export default function App() {
         {/* Sidebar */}
         <aside className="sidebar">
           <nav className="sidebar-nav">
-            {NAV.map(n => (
-              <button
-                key={n.id}
-                className={`nav-item ${tab === n.id ? 'active' : ''}`}
-                onClick={() => setTab(n.id)}
-              >
-                <i className={`ti ${n.icon}`} />
-                <span>{n.label}</span>
-                {n.id === 'limits' && stats?.limit_alerts > 0 && (
-                  <span className="nav-badge">{stats.limit_alerts}</span>
-                )}
-              </button>
-            ))}
+            {NAV.map(n => {
+              const IconComponent = n.icon
+              return (
+                <button
+                  key={n.id}
+                  className={`nav-item ${tab === n.id ? 'active' : ''}`}
+                  onClick={() => setTab(n.id)}
+                >
+                  <IconComponent size={20} />
+                  <span>{n.label}</span>
+                  {n.id === 'limits' && stats?.limit_alerts > 0 && (
+                    <span className="nav-badge">{stats.limit_alerts}</span>
+                  )}
+                </button>
+              )
+            })}
           </nav>
 
           {/* Quick stats at bottom of sidebar */}

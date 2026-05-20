@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { IconPlus, IconX, IconClockPause } from '@tabler/icons-react'
 import './AppLimits.css'
 
 function fmtSeconds(s) {
@@ -18,6 +19,7 @@ function getStatus(used, limit) {
 
 export default function AppLimits({ api, refreshKey, onRefresh }) {
   const [limits, setLimits] = useState([])
+  const [trackedApps, setTrackedApps] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [newApp, setNewApp] = useState('')
   const [newHours, setNewHours] = useState('1')
@@ -26,7 +28,15 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    api.getLimits().then(setLimits).catch(() => {})
+    Promise.all([
+      api.getLimits(),
+      api.getTodayUsage ? api.getTodayUsage() : Promise.resolve([])
+    ]).then(([limitsData, usageData]) => {
+      setLimits(limitsData)
+      // Get unique app names from usage data
+      const appNames = usageData.map(u => u.app_name)
+      setTrackedApps([...new Set(appNames)].sort())
+    }).catch(() => {})
   }, [refreshKey])
 
   async function addLimit() {
@@ -51,7 +61,7 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
       <div className="limits-header">
         <p className="limits-desc">Set daily time limits per app. You'll get a notification at 80% and when exceeded.</p>
         <button className="btn-add" onClick={() => setShowAdd(v => !v)}>
-          <i className="ti ti-plus" /> Add limit
+          <IconPlus size={16} /> Add limit
         </button>
       </div>
 
@@ -59,14 +69,20 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
         <div className="card add-form">
           <div className="form-row">
             <label>App name</label>
-            <input
-              className="form-input"
-              placeholder="e.g. Instagram, Chrome, Spotify"
+            <select
+              className="form-input form-select"
               value={newApp}
               onChange={e => setNewApp(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addLimit()}
               autoFocus
-            />
+            >
+              <option value="">Select an app...</option>
+              {trackedApps.map(app => (
+                <option key={app} value={app}>{app}</option>
+              ))}
+            </select>
+            {trackedApps.length === 0 && (
+              <div className="form-hint">No apps tracked yet. Open some apps and they'll appear here.</div>
+            )}
           </div>
           <div className="form-row form-row-inline">
             <label>Daily limit</label>
@@ -85,7 +101,7 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
           </div>
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setShowAdd(false)}>Cancel</button>
-            <button className="btn-save" onClick={addLimit} disabled={saving}>
+            <button className="btn-save" onClick={addLimit} disabled={saving || !newApp}>
               {saving ? 'Saving...' : 'Save limit'}
             </button>
           </div>
@@ -94,7 +110,7 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
 
       {limits.length === 0 ? (
         <div className="card empty-limits">
-          <i className="ti ti-clock-pause empty-icon" />
+          <IconClockPause size={48} className="empty-icon" />
           <p>No limits set yet.</p>
           <p className="muted">Add limits to track and control your app usage.</p>
         </div>
@@ -116,7 +132,7 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
                       {status === 'exceeded' ? 'Exceeded' : status === 'warn' ? `${pct}%` : 'OK'}
                     </span>
                     <button className="remove-btn" onClick={() => remove(l.app_name)} title="Remove limit">
-                      <i className="ti ti-x" />
+                      <IconX size={16} />
                     </button>
                   </div>
                 </div>

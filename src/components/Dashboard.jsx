@@ -20,6 +20,8 @@ export default function Dashboard({ api, refreshKey }) {
   const [hourly, setHourly] = useState(new Array(24).fill(0))
   const [loading, setLoading] = useState(true)
   const hourlyRef = useRef(null)
+  const pieRef = useRef(null)
+  const [hoveredSlice, setHoveredSlice] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -87,6 +89,110 @@ export default function Dashboard({ api, refreshKey }) {
     })
   }, [hourly])
 
+  // Draw pie chart for app usage distribution
+  useEffect(() => {
+    const canvas = pieRef.current
+    if (!canvas || usage.length === 0) return
+    
+    const ctx = canvas.getContext('2d')
+    const W = canvas.width = canvas.offsetWidth * window.devicePixelRatio
+    const H = canvas.height = canvas.offsetHeight * window.devicePixelRatio
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+    const w = canvas.offsetWidth
+    const h = canvas.offsetHeight
+
+    ctx.clearRect(0, 0, w, h)
+
+    const cx = w / 2.5
+    const cy = h / 2
+    const radius = Math.min(w, h) * 0.25
+
+    const total = usage.reduce((sum, u) => sum + u.total_seconds, 0)
+    let startAngle = -Math.PI / 2
+
+    // Draw pie slices
+    usage.forEach((u, i) => {
+      const sliceAngle = (u.total_seconds / total) * 2 * Math.PI
+      const color = appColor(u.app_name, i)
+      
+      ctx.fillStyle = hoveredSlice === i ? color + 'DD' : color
+      ctx.beginPath()
+      ctx.moveTo(cx, cy)
+      ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle)
+      ctx.closePath()
+      ctx.fill()
+
+      startAngle += sliceAngle
+    })
+
+    // Draw legend
+    ctx.font = '12px "Space Mono"'
+    ctx.textAlign = 'left'
+    const legendX = cx + radius + 40
+    let legendY = cy - (usage.length * 16) / 2
+
+    usage.forEach((u, i) => {
+      const color = appColor(u.app_name, i)
+      const pct = ((u.total_seconds / total) * 100).toFixed(1)
+      
+      // Draw color dot
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(legendX, legendY + 6, 4, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Draw text
+      ctx.fillStyle = hoveredSlice === i ? '#fff' : '#999'
+      ctx.fillText(`${u.app_name} - ${pct}%`, legendX + 12, legendY + 10)
+      ctx.fillStyle = hoveredSlice === i ? '#ccc' : '#666'
+      ctx.fillText(fmtSeconds(u.total_seconds), legendX + 12, legendY + 22)
+
+      legendY += 32
+    })
+  }, [usage, hoveredSlice])
+
+  const handlePieHover = (e) => {
+    const canvas = pieRef.current
+    if (!canvas || usage.length === 0) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = (e.clientX - rect.left)
+    const y = (e.clientY - rect.top)
+
+    const w = canvas.offsetWidth
+    const h = canvas.offsetHeight
+    const cx = w / 2.5
+    const cy = h / 2
+    const radius = Math.min(w, h) * 0.25
+
+    const dx = x - cx
+    const dy = y - cy
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    if (dist < radius && dist > 0) {
+      let angle = Math.atan2(dy, dx) + Math.PI / 2
+      if (angle < 0) angle += Math.PI * 2
+
+      const total = usage.reduce((sum, u) => sum + u.total_seconds, 0)
+      let currentAngle = 0
+      
+      for (let i = 0; i < usage.length; i++) {
+        const sliceAngle = (usage[i].total_seconds / total) * 2 * Math.PI
+        if (angle < currentAngle + sliceAngle) {
+          setHoveredSlice(i)
+          return
+        }
+        currentAngle += sliceAngle
+      }
+    } else {
+      setHoveredSlice(null)
+    }
+  }
+
+  const handlePieLeave = () => {
+    setHoveredSlice(null)
+  }
+
   const maxUsage = usage.length ? usage[0].total_seconds : 1
 
   return (
@@ -143,6 +249,22 @@ export default function Dashboard({ api, refreshKey }) {
             <span><span className="legend-dot" style={{background:'#333230'}} />Low usage</span>
           </div>
         </div>
+      </div>
+      <br />
+      <div className="card">
+        <div className="card-title">App distribution</div>
+        {loading || usage.length === 0 ? (
+          <div className="empty-state">No usage data yet</div>
+        ) : (
+          <div className="pie-wrap">
+            <canvas 
+              ref={pieRef} 
+              className="pie-canvas"
+              onMouseMove={handlePieHover}
+              onMouseLeave={handlePieLeave}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

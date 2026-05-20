@@ -1,9 +1,13 @@
 const { app, BrowserWindow, ipcMain, Notification } = require('electron')
 const path = require('path')
+const { exec } = require('child_process')
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
 let mainWindow
 let trackerInterval = null
+let focusModeActive = false
+let whitelistedApps = []
+let focusModeInterval = null
 
 function setupAutoUpdater() {
   if (isDev) return
@@ -60,12 +64,21 @@ app.whenReady().then(async () => {
   await db.init()
   const tracker = require('./tracker')
 
+  // Auto-launch on Windows login
+  if (process.platform === 'win32') {
+    app.setLoginItemSettings({
+      openAtLogin: true,
+      openAsHidden: true
+    })
+  }
+
   createWindow()
   setupAutoUpdater()
 
   trackerInterval = setInterval(() => {
     tracker.pollActiveWindow((appName) => {
       if (appName) {
+        console.log(`[Tracker] Recording: ${appName}`)
         db.recordUsage(appName)
         checkLimitAlerts(appName, db)
       }
@@ -106,6 +119,67 @@ function checkLimitAlerts(appName, db) {
   }
 }
 
+function killNonWhitelistedApps() {
+  const appProcessMap = {
+    'Google Chrome': 'chrome',
+    'Microsoft Edge': 'msedge',
+    'Firefox': 'firefox',
+    'VS Code': 'code',
+    'File Explorer': 'explorer',
+    'Slack': 'slack',
+    'Discord': 'discord',
+    'Spotify': 'spotify',
+    'VLC': 'vlc',
+    'Microsoft Teams': 'teams',
+    'Zoom': 'zoom',
+    'Electron': 'electron'
+  }
+
+  Object.entries(appProcessMap).forEach(([appName, processName]) => {
+    // Don't kill whitelisted apps or File Explorer (essential for Windows)
+    if (whitelistedApps.includes(appName) || appName === 'File Explorer') {
+      return
+    }
+    
+    // Kill the process immediately
+    const killCmd = `Stop-Process -Name ${processName} -Force -ErrorAction SilentlyContinue`
+    exec(`powershell -Command "${killCmd.replace(/"/g, '\\"')}"`, () => {
+      console.log(`[Focus] Killed: ${appName}`)
+    })
+  })
+}
+
+function monitorForBlockedApps() {
+  if (!focusModeActive) return
+  
+  const appProcessMap = {
+    'Google Chrome': 'chrome',
+    'Microsoft Edge': 'msedge',
+    'Firefox': 'firefox',
+    'VS Code': 'code',
+    'Slack': 'slack',
+    'Discord': 'discord',
+    'Spotify': 'spotify',
+    'VLC': 'vlc',
+    'Microsoft Teams': 'teams',
+    'Zoom': 'zoom',
+    'Electron': 'electron'
+  }
+
+  Object.entries(appProcessMap).forEach(([appName, processName]) => {
+    // Skip whitelisted apps
+    if (whitelistedApps.includes(appName)) {
+      return
+    }
+    
+    // Aggressively kill any instance of blocked app every time monitor runs
+    const killCmd = `Stop-Process -Name ${processName} -Force -ErrorAction SilentlyContinue`
+    exec(`powershell -Command "${killCmd.replace(/"/g, '\\"')}"`, () => {
+      // Silently kill - only log if needed for debugging
+    })
+  })
+}
+
 function setupIPC(db) {
   ipcMain.handle('get-today-usage',  () => db.getTodayUsage())
   ipcMain.handle('get-weekly-usage', () => db.getWeeklyUsage())
@@ -128,5 +202,32 @@ function setupIPC(db) {
   ipcMain.handle('update-install', () => {
     const { autoUpdater } = require('electron-updater')
     autoUpdater.quitAndInstall()
+  })
+
+  // Focus mode handlers
+  ipcMain.handle('start-focus-mode', (_, { apps }) => {
+    focusModeActive = true
+    whitelistedApps = apps
+    console.log(`[Focus] Mode started with apps: ${apps.join(', ')}`)
+    
+    // Kill non-whitelisted apps
+    killNonWhitelistedApps()
+    
+    // Monitor for blocked app attempts every 1 second (aggressive blocking)
+    if (focusModeInterval) clearInterval(focusModeInterval)
+    focusModeInterval = setInterval(monitorForBlockedApps, 1000)
+    
+    return true
+  })
+
+  ipcMain.handle('stop-focus-mode', () => {
+    focusModeActive = false
+    whitelistedApps = []
+    if (focusModeInterval) {
+      clearInterval(focusModeInterval)
+      focusModeInterval = null
+    }
+    console.log('[Focus] Mode stopped - all apps re-enabled')
+    return true
   })
 }
