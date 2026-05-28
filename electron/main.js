@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, Notification } = require('electron')
+const { app, BrowserWindow, ipcMain, Notification, Tray, Menu } = require('electron')
 const path = require('path')
 const { exec } = require('child_process')
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
 let mainWindow
+let tray = null
 let trackerInterval = null
 let focusModeActive = false
 let whitelistedApps = []
@@ -56,7 +57,18 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 
-  mainWindow.on('closed', () => { mainWindow = null })
+  mainWindow.on('close', (e) => {
+    if (!app.isQuitting) {
+      e.preventDefault()
+      mainWindow.hide()
+    }
+  })
+}
+
+function showWindow() {
+  if (!mainWindow) createWindow()
+  mainWindow.show()
+  mainWindow.focus()
 }
 
 app.whenReady().then(async () => {
@@ -73,6 +85,23 @@ app.whenReady().then(async () => {
   }
 
   createWindow()
+
+  // Hide window if auto-launched at login
+  if (process.argv.includes('--hidden') || app.getLoginItemSettings().wasOpenedAsHidden) {
+    mainWindow.hide()
+  }
+
+  // System tray
+  const iconPath = path.join(__dirname, '../assets/tray-icon.png')
+  tray = new Tray(iconPath)
+  tray.setToolTip('Digital Wellbeing')
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Open Digital Wellbeing', click: showWindow },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { app.isQuitting = true; app.quit() } }
+  ]))
+  tray.on('double-click', showWindow)
+
   setupAutoUpdater()
 
   trackerInterval = setInterval(() => {
@@ -89,12 +118,15 @@ app.whenReady().then(async () => {
 })
 
 app.on('window-all-closed', () => {
+  // Keep running in tray — tracking continues in background
+})
+
+app.on('before-quit', () => {
   if (trackerInterval) clearInterval(trackerInterval)
-  if (process.platform !== 'darwin') app.quit()
 })
 
 app.on('activate', () => {
-  if (mainWindow === null) createWindow()
+  showWindow()
 })
 
 function checkLimitAlerts(appName, db) {
@@ -197,7 +229,7 @@ function setupIPC(db) {
     if (mainWindow?.isMaximized()) mainWindow.unmaximize()
     else mainWindow?.maximize()
   })
-  ipcMain.handle('window-close', () => mainWindow?.close())
+  ipcMain.handle('window-close', () => mainWindow?.hide())
 
   ipcMain.handle('update-install', () => {
     const { autoUpdater } = require('electron-updater')
