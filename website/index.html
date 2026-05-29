@@ -1,0 +1,2021 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Wellbeing — Take Back Your Time</title>
+    <meta
+      name="description"
+      content="A free Windows app for tracking screen time, enforcing app limits, and running Pomodoro focus sessions. Runs silently in the system tray."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #04040f;
+        --glass-bg: rgba(255, 255, 255, 0.04);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --glass-highlight: rgba(255, 255, 255, 0.15);
+        --text: #ffffff;
+        --text-muted: rgba(255, 255, 255, 0.55);
+        --text-dim: rgba(255, 255, 255, 0.35);
+        --accent-purple: #8b5cf6;
+        --accent-cyan: #06b6d4;
+        --accent-pink: #ec4899;
+        --grad: linear-gradient(135deg, #8b5cf6, #06b6d4);
+        --grad-text: linear-gradient(135deg, #a78bfa, #38bdf8, #f0abfc);
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── BACKGROUND BLOBS ── */
+      .bg-blobs {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(130px);
+        opacity: 0.26;
+        animation: blobFloat 12s ease-in-out infinite;
+      }
+      .blob-1 {
+        width: 750px; height: 750px;
+        background: radial-gradient(circle, rgba(212,208,255,0.52), rgba(192,188,242,0.16) 40%, transparent 70%);
+        top: -180px; left: -200px; animation-delay: 0s;
+      }
+      .blob-2 {
+        width: 650px; height: 650px;
+        background: radial-gradient(circle, rgba(178,218,232,0.48), rgba(158,202,218,0.14) 40%, transparent 70%);
+        top: 150px; right: -150px; animation-delay: -4s;
+      }
+      .blob-3 {
+        width: 550px; height: 550px;
+        background: radial-gradient(circle, rgba(232,208,222,0.40), rgba(212,188,205,0.12) 40%, transparent 70%);
+        bottom: 50px; left: 25%; animation-delay: -8s;
+      }
+      .blob-4 {
+        width: 450px; height: 450px;
+        background: radial-gradient(circle, rgba(202,198,252,0.46), rgba(182,178,235,0.14) 40%, transparent 70%);
+        bottom: -80px; right: 15%; animation-delay: -2s;
+      }
+      .blob-5 {
+        width: 300px; height: 300px;
+        background: radial-gradient(circle, rgba(192,228,212,0.36), transparent 70%);
+        top: 60%; left: 5%; animation-delay: -6s;
+      }
+
+      @keyframes blobFloat {
+        0% {
+          transform: translate(0, 0) scale(1);
+        }
+        25% {
+          transform: translate(40px, -50px) scale(1.06);
+        }
+        50% {
+          transform: translate(-10px, -30px) scale(0.97);
+        }
+        75% {
+          transform: translate(-30px, 20px) scale(1.03);
+        }
+        100% {
+          transform: translate(0, 0) scale(1);
+        }
+      }
+
+      /* ── LIQUID GLASS MIXIN ── */
+      .glass {
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.1) 0%,
+          rgba(255, 255, 255, 0.04) 40%,
+          rgba(255, 255, 255, 0.07) 100%
+        );
+        backdrop-filter: blur(64px) saturate(145%) brightness(1.07) contrast(1.02);
+        -webkit-backdrop-filter: blur(64px) saturate(145%) brightness(1.07) contrast(1.02);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow:
+          0 24px 64px rgba(0, 0, 0, 0.45),
+          0 0 0 1px rgba(139, 92, 246, 0.12),
+          inset 0 2px 0 rgba(255, 255, 255, 0.28),
+          inset 0 1px 12px rgba(255, 255, 255, 0.04),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+          inset 1px 0 0 rgba(255, 255, 255, 0.08),
+          inset -1px 0 0 rgba(255, 255, 255, 0.04);
+        position: relative;
+      }
+
+      /* ── LAYOUT ── */
+      .container {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+        position: relative;
+        z-index: 1;
+      }
+      section {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── NAVBAR ── */
+      nav {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        width: calc(100% - 48px);
+        max-width: 900px;
+        border-radius: 20px;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: -0.3px;
+      }
+      .nav-logo .logo-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--grad);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        list-style: none;
+      }
+      .nav-links a {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 6px 14px;
+        border-radius: 10px;
+        transition:
+          color 0.2s,
+          background 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.07);
+      }
+
+      .nav-cta {
+        background: var(--grad);
+        color: white !important;
+        border-radius: 12px;
+        padding: 8px 18px !important;
+        font-weight: 600 !important;
+        transition:
+          opacity 0.2s,
+          transform 0.2s !important;
+      }
+      .nav-cta:hover {
+        opacity: 0.9;
+        transform: translateY(-1px) !important;
+        background: rgba(0, 0, 0, 0) !important;
+      }
+
+      /* ── HERO ── */
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        padding: 120px 0 80px;
+      }
+      .hero-inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 80px;
+        align-items: center;
+      }
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px 6px 8px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 24px;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        background: rgba(139, 92, 246, 0.08);
+      }
+      .hero-badge .badge-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--grad);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+      }
+      .hero-badge .badge-new {
+        background: var(--grad);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+      }
+
+      .hero-title {
+        font-size: clamp(40px, 5vw, 64px);
+        font-weight: 900;
+        line-height: 1.08;
+        letter-spacing: -2px;
+        margin-bottom: 20px;
+      }
+      .hero-title .grad-text {
+        background: var(--grad-text);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .hero-sub {
+        font-size: 18px;
+        line-height: 1.7;
+        color: var(--text-muted);
+        margin-bottom: 36px;
+        max-width: 440px;
+      }
+
+      .hero-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+      }
+
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 28px;
+        border-radius: 16px;
+        background: var(--grad);
+        color: white;
+        font-size: 15px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: -0.2px;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.5);
+      }
+      .btn-primary svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 24px;
+        border-radius: 16px;
+        color: var(--text-muted);
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid var(--glass-border);
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        transition:
+          color 0.2s,
+          border-color 0.2s,
+          transform 0.2s;
+      }
+      .btn-ghost:hover {
+        color: var(--text);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+      }
+      .btn-ghost svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .hero-trust {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .trust-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+      .trust-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(139, 92, 246, 0.6);
+      }
+
+      /* ── APP MOCKUP ── */
+      .hero-visual {
+        perspective: 1000px;
+      }
+      .app-window {
+        border-radius: 16px;
+        overflow: hidden;
+        transform: rotateY(-8deg) rotateX(4deg);
+        will-change: transform;
+        box-shadow:
+          0 40px 80px rgba(0, 0, 0, 0.6),
+          0 0 0 1px rgba(255, 255, 255, 0.08),
+          0 0 80px rgba(139, 92, 246, 0.15);
+        position: relative;
+      }
+      .app-glare {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+        border-radius: 16px;
+        background: radial-gradient(
+          circle at 30% 20%,
+          rgba(255, 255, 255, 0.08) 0%,
+          transparent 60%
+        );
+        transition: background 0.1s;
+        mix-blend-mode: screen;
+      }
+
+      .app-titlebar {
+        background: rgba(15, 15, 30, 0.95);
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .titlebar-btn {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .tb-close {
+        background: #ff5f57;
+      }
+      .tb-min {
+        background: #febc2e;
+      }
+      .tb-max {
+        background: #28c840;
+      }
+      .titlebar-title {
+        margin-left: 8px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
+        font-weight: 500;
+      }
+
+      .app-body {
+        display: flex;
+        background: rgba(10, 10, 25, 0.95);
+        height: 320px;
+      }
+      .app-sidebar {
+        width: 180px;
+        padding: 16px 12px;
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.45);
+        cursor: default;
+      }
+      .sidebar-item.active {
+        background: rgba(139, 92, 246, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+      }
+      .sidebar-icon {
+        font-size: 14px;
+      }
+
+      .app-main {
+        flex: 1;
+        padding: 16px;
+        overflow: hidden;
+      }
+
+      .app-stats-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .app-stat-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+      .stat-label {
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.35);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: white;
+      }
+      .stat-value.purple {
+        background: linear-gradient(135deg, #a78bfa, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .stat-value.cyan {
+        background: linear-gradient(135deg, #38bdf8, #06b6d4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .stat-value.green {
+        background: linear-gradient(135deg, #34d399, #10b981);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .app-chart-label {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.35);
+        margin-bottom: 8px;
+      }
+      .app-chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 80px;
+        margin-bottom: 16px;
+      }
+      .chart-bar {
+        flex: 1;
+        border-radius: 4px 4px 0 0;
+        background: rgba(139, 92, 246, 0.3);
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        transition: all 0.3s;
+      }
+      .chart-bar.today {
+        background: linear-gradient(to top, #8b5cf6, #38bdf8);
+        border-color: rgba(139, 92, 246, 0.6);
+      }
+
+      .app-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .app-list-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+      }
+      .app-name {
+        color: rgba(255, 255, 255, 0.7);
+        flex: 1;
+      }
+      .app-bar-track {
+        flex: 2;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .app-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+      }
+      .app-time {
+        color: rgba(255, 255, 255, 0.35);
+        font-size: 10px;
+        width: 36px;
+        text-align: right;
+      }
+
+      /* ── STATS BAR ── */
+      .stats-bar {
+        padding: 20px 0;
+        margin: 0 0 100px;
+      }
+      .stats-bar-inner {
+        border-radius: 20px;
+        padding: 20px 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+        flex-wrap: wrap;
+      }
+      .stat-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+      .stat-pill-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      .pill-purple { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+      .pill-cyan   { background: rgba(6, 182, 212, 0.15);  color: #38bdf8; }
+      .pill-green  { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+      .pill-pink   { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+
+      /* ── SECTION HEADER ── */
+      .section-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent-purple);
+        background: rgba(139, 92, 246, 0.1);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        margin-bottom: 16px;
+      }
+      .section-title {
+        font-size: clamp(28px, 4vw, 44px);
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        line-height: 1.1;
+        margin-bottom: 16px;
+      }
+      .section-sub {
+        font-size: 17px;
+        color: var(--text-muted);
+        line-height: 1.7;
+        max-width: 500px;
+      }
+      .text-center {
+        text-align: center;
+      }
+      .text-center .section-sub {
+        margin: 0 auto;
+      }
+
+      /* ── FEATURES ── */
+      .features {
+        padding: 0 0 120px;
+      }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 60px;
+      }
+      .feature-card {
+        border-radius: 20px;
+        padding: 28px;
+        overflow: hidden;
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+        cursor: default;
+      }
+      .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 20px 40px rgba(0, 0, 0, 0.3),
+          0 0 0 1px rgba(255, 255, 255, 0.12);
+      }
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        margin-bottom: 18px;
+      }
+      .icon-purple { background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.25); color: #a78bfa; }
+      .icon-cyan   { background: rgba(6, 182, 212, 0.15);  border: 1px solid rgba(6, 182, 212, 0.25);  color: #38bdf8; }
+      .icon-pink   { background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.25); color: #f472b6; }
+      .icon-green  { background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.25); color: #34d399; }
+      .icon-orange { background: rgba(251, 146, 60, 0.15); border: 1px solid rgba(251, 146, 60, 0.25); color: #fb923c; }
+      .icon-blue   { background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.25); color: #818cf8; }
+      .logo-dot svg, .logo-dot-sm svg { color: white; }
+
+      .feature-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        letter-spacing: -0.3px;
+      }
+      .feature-desc {
+        font-size: 14px;
+        color: var(--text-muted);
+        line-height: 1.65;
+      }
+
+      /* ── HOW IT WORKS — TIMELINE ── */
+      .how { padding: 0 0 120px; }
+
+      .timeline-wrapper {
+        position: relative;
+        margin-top: 72px;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* The animated line track */
+      .timeline-track {
+        position: absolute;
+        left: 23px;
+        top: 24px;
+        bottom: 24px;
+        width: 2px;
+        z-index: 0;
+      }
+      .timeline-line-bg {
+        position: absolute;
+        inset: 0;
+        background: rgba(255,255,255,0.07);
+        border-radius: 99px;
+      }
+      .timeline-line-fill {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 0%;
+        background: linear-gradient(180deg, #8B5CF6 0%, #06B6D4 55%, #34d399 100%);
+        border-radius: 99px;
+        box-shadow: 0 0 8px rgba(139,92,246,0.9), 0 0 24px rgba(139,92,246,0.5), 0 0 48px rgba(139,92,246,0.2);
+        will-change: height;
+      }
+      .timeline-orb {
+        position: absolute;
+        left: 50%;
+        top: 0%;
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        box-shadow: 0 0 6px #fff, 0 0 14px rgba(139,92,246,1), 0 0 30px rgba(139,92,246,0.7), 0 0 60px rgba(139,92,246,0.35);
+        will-change: top;
+        z-index: 3;
+      }
+
+      /* Each row: dot + card */
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 28px;
+        align-items: center;
+        margin-bottom: 36px;
+        position: relative;
+        z-index: 1;
+      }
+      .timeline-item:last-child { margin-bottom: 0; }
+
+      .timeline-dot {
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 17px;
+        z-index: 2;
+        transition: box-shadow 0.5s, border-color 0.4s, background 0.4s;
+      }
+      .step-1-dot { background: rgba(139,92,246,0.1); border: 2px solid rgba(139,92,246,0.2); color: #a78bfa; }
+      .step-2-dot { background: rgba(6,182,212,0.1);  border: 2px solid rgba(6,182,212,0.2);  color: #38bdf8; }
+      .step-3-dot { background: rgba(52,211,153,0.1); border: 2px solid rgba(52,211,153,0.2); color: #34d399; }
+
+      .timeline-dot.active.step-1-dot {
+        background: rgba(139,92,246,0.22); border-color: rgba(139,92,246,0.7);
+        box-shadow: 0 0 0 6px rgba(139,92,246,0.1), 0 0 24px rgba(139,92,246,0.45);
+      }
+      .timeline-dot.active.step-2-dot {
+        background: rgba(6,182,212,0.22); border-color: rgba(6,182,212,0.7);
+        box-shadow: 0 0 0 6px rgba(6,182,212,0.1), 0 0 24px rgba(6,182,212,0.45);
+      }
+      .timeline-dot.active.step-3-dot {
+        background: rgba(52,211,153,0.22); border-color: rgba(52,211,153,0.7);
+        box-shadow: 0 0 0 6px rgba(52,211,153,0.1), 0 0 24px rgba(52,211,153,0.45);
+      }
+
+      .step-card {
+        border-radius: 20px;
+        padding: 28px 32px;
+        overflow: hidden;
+      }
+      .timeline-card {
+        opacity: 0;
+        transform: translateX(28px);
+        transition: opacity 0.55s ease, transform 0.55s ease;
+      }
+      .timeline-card.visible { opacity: 1; transform: translateX(0); }
+
+      .step-title {
+        font-size: 17px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.3px;
+      }
+      .step-desc {
+        font-size: 14px; color: var(--text-muted); line-height: 1.65;
+      }
+
+      /* ── DOWNLOAD CTA ── */
+      .download {
+        padding: 0 0 120px;
+      }
+      .download-card {
+        border-radius: 28px;
+        padding: 64px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .download-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 50% -20%,
+          rgba(139, 92, 246, 0.15),
+          transparent 60%
+        );
+        pointer-events: none;
+      }
+      .download-card .section-title {
+        font-size: clamp(32px, 4vw, 52px);
+      }
+      .download-sub {
+        font-size: 17px;
+        color: var(--text-muted);
+        margin: 16px auto 40px;
+        max-width: 480px;
+        line-height: 1.7;
+      }
+      .download-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .btn-primary-lg {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 18px 36px;
+        border-radius: 18px;
+        background: var(--grad);
+        color: white;
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: -0.3px;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        box-shadow: 0 4px 30px rgba(139, 92, 246, 0.45);
+      }
+      .btn-primary-lg:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(139, 92, 246, 0.55);
+      }
+      .download-meta {
+        margin-top: 24px;
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+      .download-meta span {
+        margin: 0 8px;
+      }
+
+      /* ── FOOTER ── */
+      footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 40px 0;
+      }
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .footer-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .footer-logo .logo-dot-sm {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: var(--grad);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+      }
+      .footer-links {
+        display: flex;
+        gap: 24px;
+      }
+      .footer-links a {
+        color: var(--text-dim);
+        text-decoration: none;
+        font-size: 13px;
+        transition: color 0.2s;
+      }
+      .footer-links a:hover {
+        color: var(--text-muted);
+      }
+      .footer-copy {
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+
+      /* ── FADE IN ── */
+      .fade-in {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease;
+      }
+      .fade-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .fade-delay-1 {
+        transition-delay: 0.1s;
+      }
+      .fade-delay-2 {
+        transition-delay: 0.2s;
+      }
+      .fade-delay-3 {
+        transition-delay: 0.3s;
+      }
+      .fade-delay-4 {
+        transition-delay: 0.4s;
+      }
+      .fade-delay-5 {
+        transition-delay: 0.5s;
+      }
+
+      /* ── RESPONSIVE ── */
+      @media (max-width: 900px) {
+        .hero-inner {
+          grid-template-columns: 1fr;
+          gap: 60px;
+          text-align: center;
+        }
+        .hero-sub {
+          max-width: 100%;
+        }
+        .hero-actions {
+          justify-content: center;
+        }
+        .hero-trust {
+          justify-content: center;
+        }
+        .hero-visual {
+          display: none;
+        }
+        .features-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .timeline-wrapper { padding: 0 8px; }
+        nav {
+          padding: 12px 20px;
+        }
+        .nav-links {
+          display: none;
+        }
+        .download-card {
+          padding: 40px 24px;
+        }
+      }
+      @media (max-width: 600px) {
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+        .stats-bar-inner {
+          gap: 20px;
+        }
+        .footer-inner {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+
+      /* ════════════════════════════════════════
+       LIQUID GLASS — DEEP POLISH
+       ════════════════════════════════════════ */
+
+      /* Specular highlight band — the ONE thing that makes glass feel real */
+      .feature-card.glass::before,
+      .step-card.glass::before,
+      .stats-bar-inner.glass::before,
+      .download-card.glass::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 12%;
+        right: 12%;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.5) 25%,
+          rgba(255, 255, 255, 0.9) 50%,
+          rgba(255, 255, 255, 0.5) 75%,
+          transparent 100%
+        );
+        border-radius: 0 0 2px 2px;
+        z-index: 2;
+      }
+
+      /* Animated shimmer sweep on all glass */
+      @keyframes glassSweep {
+        0% {
+          transform: translateX(-100%) skewX(-15deg);
+        }
+        100% {
+          transform: translateX(300%) skewX(-15deg);
+        }
+      }
+      .feature-card.glass::after,
+      .step-card.glass::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(
+          105deg,
+          transparent 40%,
+          rgba(255, 255, 255, 0.04) 50%,
+          rgba(255, 255, 255, 0.07) 55%,
+          rgba(255, 255, 255, 0.04) 60%,
+          transparent 70%
+        );
+        animation: glassSweep 6s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 1;
+      }
+      .feature-card:nth-child(2).glass::after {
+        animation-delay: -2s;
+      }
+      .feature-card:nth-child(3).glass::after {
+        animation-delay: -4s;
+      }
+      .feature-card:nth-child(4).glass::after {
+        animation-delay: -1s;
+      }
+      .feature-card:nth-child(5).glass::after {
+        animation-delay: -3s;
+      }
+      .feature-card:nth-child(6).glass::after {
+        animation-delay: -5s;
+      }
+      .timeline-item:nth-child(3) .step-card.glass::after { animation-delay: -2s; }
+      .timeline-item:nth-child(4) .step-card.glass::after { animation-delay: -4s; }
+
+      /* Feature card — colored glass tints per card */
+      .feature-card:nth-child(1).glass {
+        background: linear-gradient(
+          145deg,
+          rgba(139, 92, 246, 0.14) 0%,
+          rgba(99, 102, 241, 0.06) 60%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        border-color: rgba(139, 92, 246, 0.3);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.4),
+          0 0 0 1px rgba(139, 92, 246, 0.15),
+          inset 0 2px 0 rgba(139, 92, 246, 0.3),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      }
+      .feature-card:nth-child(2).glass {
+        background: linear-gradient(
+          145deg,
+          rgba(6, 182, 212, 0.12) 0%,
+          rgba(34, 211, 238, 0.05) 60%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        border-color: rgba(6, 182, 212, 0.28);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.4),
+          0 0 0 1px rgba(6, 182, 212, 0.12),
+          inset 0 2px 0 rgba(6, 182, 212, 0.28),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      }
+      .feature-card:nth-child(3).glass {
+        background: linear-gradient(
+          145deg,
+          rgba(236, 72, 153, 0.12) 0%,
+          rgba(244, 114, 182, 0.05) 60%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        border-color: rgba(236, 72, 153, 0.28);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.4),
+          0 0 0 1px rgba(236, 72, 153, 0.12),
+          inset 0 2px 0 rgba(236, 72, 153, 0.28),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      }
+      .feature-card:nth-child(4).glass {
+        background: linear-gradient(
+          145deg,
+          rgba(52, 211, 153, 0.12) 0%,
+          rgba(16, 185, 129, 0.05) 60%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        border-color: rgba(52, 211, 153, 0.28);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.4),
+          0 0 0 1px rgba(52, 211, 153, 0.12),
+          inset 0 2px 0 rgba(52, 211, 153, 0.28),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      }
+      .feature-card:nth-child(5).glass {
+        background: linear-gradient(
+          145deg,
+          rgba(251, 146, 60, 0.12) 0%,
+          rgba(249, 115, 22, 0.05) 60%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        border-color: rgba(251, 146, 60, 0.28);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.4),
+          0 0 0 1px rgba(251, 146, 60, 0.12),
+          inset 0 2px 0 rgba(251, 146, 60, 0.28),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      }
+      .feature-card:nth-child(6).glass {
+        background: linear-gradient(
+          145deg,
+          rgba(99, 102, 241, 0.14) 0%,
+          rgba(79, 70, 229, 0.06) 60%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        border-color: rgba(99, 102, 241, 0.3);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.4),
+          0 0 0 1px rgba(99, 102, 241, 0.15),
+          inset 0 2px 0 rgba(99, 102, 241, 0.3),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      }
+
+      /* Feature card hover — glow matches card color */
+      .feature-card:nth-child(1).glass:hover {
+        box-shadow:
+          0 28px 70px rgba(0, 0, 0, 0.45),
+          0 0 50px rgba(139, 92, 246, 0.25),
+          inset 0 2px 0 rgba(139, 92, 246, 0.4);
+      }
+      .feature-card:nth-child(2).glass:hover {
+        box-shadow:
+          0 28px 70px rgba(0, 0, 0, 0.45),
+          0 0 50px rgba(6, 182, 212, 0.22),
+          inset 0 2px 0 rgba(6, 182, 212, 0.38);
+      }
+      .feature-card:nth-child(3).glass:hover {
+        box-shadow:
+          0 28px 70px rgba(0, 0, 0, 0.45),
+          0 0 50px rgba(236, 72, 153, 0.22),
+          inset 0 2px 0 rgba(236, 72, 153, 0.38);
+      }
+      .feature-card:nth-child(4).glass:hover {
+        box-shadow:
+          0 28px 70px rgba(0, 0, 0, 0.45),
+          0 0 50px rgba(52, 211, 153, 0.22),
+          inset 0 2px 0 rgba(52, 211, 153, 0.38);
+      }
+      .feature-card:nth-child(5).glass:hover {
+        box-shadow:
+          0 28px 70px rgba(0, 0, 0, 0.45),
+          0 0 50px rgba(251, 146, 60, 0.22),
+          inset 0 2px 0 rgba(251, 146, 60, 0.38);
+      }
+      .feature-card:nth-child(6).glass:hover {
+        box-shadow:
+          0 28px 70px rgba(0, 0, 0, 0.45),
+          0 0 50px rgba(99, 102, 241, 0.25),
+          inset 0 2px 0 rgba(99, 102, 241, 0.4);
+      }
+
+      /* Navbar — ultra premium glass */
+      nav.glass {
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.12) 0%,
+          rgba(255, 255, 255, 0.05) 50%,
+          rgba(255, 255, 255, 0.09) 100%
+        );
+        backdrop-filter: blur(60px) saturate(250%) brightness(1.22)
+          contrast(1.05);
+        -webkit-backdrop-filter: blur(60px) saturate(250%) brightness(1.22)
+          contrast(1.05);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow:
+          0 8px 40px rgba(0, 0, 0, 0.35),
+          0 0 0 1px rgba(139, 92, 246, 0.18),
+          inset 0 2px 0 rgba(255, 255, 255, 0.35),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+          inset 1px 0 0 rgba(255, 255, 255, 0.12),
+          inset -1px 0 0 rgba(255, 255, 255, 0.06);
+      }
+
+      /* Step cards — gradient glass (timeline-item children 2,3,4 of wrapper) */
+      .timeline-item:nth-child(2) .step-card.glass {
+        background: linear-gradient(145deg, rgba(139,92,246,0.11) 0%, rgba(255,255,255,0.03) 100%);
+        border-color: rgba(139,92,246,0.25);
+      }
+      .timeline-item:nth-child(3) .step-card.glass {
+        background: linear-gradient(145deg, rgba(6,182,212,0.1) 0%, rgba(255,255,255,0.03) 100%);
+        border-color: rgba(6,182,212,0.22);
+      }
+      .timeline-item:nth-child(4) .step-card.glass {
+        background: linear-gradient(
+          145deg,
+          rgba(52, 211, 153, 0.1) 0%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        border-color: rgba(52, 211, 153, 0.22);
+      }
+
+      /* Download card — most premium piece */
+      .download-card.glass {
+        background: linear-gradient(
+          145deg,
+          rgba(139, 92, 246, 0.1) 0%,
+          rgba(255, 255, 255, 0.05) 40%,
+          rgba(6, 182, 212, 0.08) 80%,
+          rgba(236, 72, 153, 0.06) 100%
+        );
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow:
+          0 40px 100px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(139, 92, 246, 0.2),
+          0 0 80px rgba(139, 92, 246, 0.12),
+          inset 0 2px 0 rgba(255, 255, 255, 0.3),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+          inset 0 0 60px rgba(139, 92, 246, 0.04);
+      }
+
+      /* Stats bar glass */
+      .stats-bar-inner.glass {
+        background: linear-gradient(
+          90deg,
+          rgba(139, 92, 246, 0.08) 0%,
+          rgba(255, 255, 255, 0.05) 50%,
+          rgba(6, 182, 212, 0.07) 100%
+        );
+        border-color: rgba(255, 255, 255, 0.15);
+      }
+
+      /* Hero badge glass touch */
+      .hero-badge {
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+      }
+
+      /* Primary button — glass overlay */
+      .btn-primary,
+      .btn-primary-lg {
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-primary::before,
+      .btn-primary-lg::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 50%;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.18) 0%,
+          transparent 100%
+        );
+        border-radius: inherit;
+        pointer-events: none;
+      }
+
+      /* Background — add subtle noise grain via SVG filter */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.025;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+        background-size: 200px 200px;
+      }
+
+      /* Prismatic iridescent ring on hover for all cards */
+      @keyframes iridescent {
+        0%   { filter: hue-rotate(0deg); }
+        100% { filter: hue-rotate(360deg); }
+      }
+      .feature-card:hover .feature-icon { animation: iridescent 3s linear infinite; }
+
+      /* ── VISION OS NEUTRAL — clear glass override ── */
+      /* Strip all colored card tints — glass is the material, not the color */
+      .feature-card.glass,
+      .feature-card:nth-child(1).glass,
+      .feature-card:nth-child(2).glass,
+      .feature-card:nth-child(3).glass,
+      .feature-card:nth-child(4).glass,
+      .feature-card:nth-child(5).glass,
+      .feature-card:nth-child(6).glass {
+        background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.025) 50%, rgba(255,255,255,0.055) 100%);
+        border-color: rgba(255,255,255,0.11);
+        box-shadow: 0 16px 48px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.05), inset 0 2px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.18);
+      }
+      .feature-card:nth-child(1).glass:hover,
+      .feature-card:nth-child(2).glass:hover,
+      .feature-card:nth-child(3).glass:hover,
+      .feature-card:nth-child(4).glass:hover,
+      .feature-card:nth-child(5).glass:hover,
+      .feature-card:nth-child(6).glass:hover {
+        box-shadow: 0 28px 64px rgba(0,0,0,0.42), 0 0 0 1px rgba(255,255,255,0.12), 0 0 40px rgba(255,255,255,0.04), inset 0 2px 0 rgba(255,255,255,0.22);
+        border-color: rgba(255,255,255,0.16);
+      }
+      .timeline-item:nth-child(2) .step-card.glass,
+      .timeline-item:nth-child(3) .step-card.glass,
+      .timeline-item:nth-child(4) .step-card.glass {
+        background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.025) 100%);
+        border-color: rgba(255,255,255,0.11);
+      }
+      .download-card.glass {
+        background: linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.07) 100%);
+        border-color: rgba(255,255,255,0.14);
+        box-shadow: 0 40px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08), inset 0 2px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.22), inset 0 0 60px rgba(255,255,255,0.02);
+      }
+      .stats-bar-inner.glass {
+        background: linear-gradient(90deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.035) 50%, rgba(255,255,255,0.055) 100%);
+        border-color: rgba(255,255,255,0.1);
+      }
+      nav.glass {
+        backdrop-filter: blur(72px) saturate(160%) brightness(1.1) contrast(1.03);
+        -webkit-backdrop-filter: blur(72px) saturate(160%) brightness(1.1) contrast(1.03);
+      }
+
+      /* ── MOBILE BLOCK ── */
+      #mobileBlock {
+        position: fixed; inset: 0; z-index: 99999;
+        display: flex; align-items: center; justify-content: center;
+        background: #04040f; padding: 28px;
+      }
+      .mobile-block-card {
+        max-width: 340px; width: 100%;
+        text-align: center; border-radius: 28px; padding: 48px 36px;
+      }
+      .mobile-block-icon {
+        width: 68px; height: 68px; border-radius: 20px;
+        background: linear-gradient(135deg, #8B5CF6, #06B6D4);
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 28px; color: white;
+      }
+      .mobile-block-title { font-size: 26px; font-weight: 800; letter-spacing: -0.8px; margin-bottom: 14px; }
+      .mobile-block-sub   { font-size: 15px; color: rgba(255,255,255,0.55); line-height: 1.7; }
+
+      /* ── NOT-WINDOWS NOTICE ── */
+      .not-win-notice {
+        display: flex; align-items: center; gap: 14px;
+        padding: 16px 20px; border-radius: 16px;
+        border: 1px solid rgba(251,146,60,0.3);
+        background: rgba(251,146,60,0.08);
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      }
+      .not-win-icon-wrap {
+        width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+        background: rgba(251,146,60,0.15); border: 1px solid rgba(251,146,60,0.25);
+        display: flex; align-items: center; justify-content: center; color: #fb923c;
+      }
+      .not-win-title { font-size: 14px; font-weight: 700; color: #fb923c; margin-bottom: 4px; }
+      .not-win-sub   { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.55; }
+      .not-win-notice-lg { padding: 20px 28px; border-radius: 20px; }
+      .not-win-notice-lg .not-win-icon-wrap { width: 48px; height: 48px; }
+      .not-win-notice-lg .not-win-title { font-size: 15px; }
+      .not-win-notice-lg .not-win-sub   { font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <!-- Background blobs -->
+    <div class="bg-blobs">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+      <div class="blob blob-4"></div>
+      <div class="blob blob-5"></div>
+    </div>
+
+    <!-- ── NAVBAR ── -->
+    <nav class="glass">
+      <div class="nav-logo">
+        <div class="logo-dot"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        Digital Wellbeing
+      </div>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li>
+          <a
+            href="https://github.com/Sainikhil-315/digital-wellbeing-desktop"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+        </li>
+        <li><a href="#download" class="nav-cta">Download</a></li>
+      </ul>
+    </nav>
+
+    <!-- ── HERO ── -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-inner">
+          <div class="hero-content">
+            <div class="hero-badge fade-in">
+              <span class="badge-dot">✦</span>
+              <span class="badge-new">v2.1.0</span>
+              <span>Now Available — Free for Windows</span>
+            </div>
+            <h1 class="hero-title fade-in fade-delay-1">
+              Take Back<br />
+              <span class="grad-text">Your Time.</span>
+            </h1>
+            <p class="hero-sub fade-in fade-delay-2">
+              Track every minute, set hard limits on distracting apps, and crush
+              focus sessions with Pomodoro. All locally — no cloud, no
+              subscriptions, no BS.
+            </p>
+            <div class="hero-actions fade-in fade-delay-3">
+              <a
+                id="heroDlBtn"
+                href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/releases/latest/download/Digital-Wellbeing-Setup-2.1.0.exe"
+                class="btn-primary"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Download for Windows
+              </a>
+              <a
+                href="https://github.com/Sainikhil-315/digital-wellbeing-desktop"
+                target="_blank"
+                rel="noopener"
+                class="btn-ghost"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
+                  />
+                </svg>
+                View on GitHub
+              </a>
+            </div>
+            <div class="hero-trust fade-in fade-delay-4">
+              <div class="trust-item">
+                <div class="trust-dot"></div>
+                Free forever
+              </div>
+              <div class="trust-item">
+                <div class="trust-dot"></div>
+                Windows 10 / 11
+              </div>
+              <div class="trust-item">
+                <div class="trust-dot"></div>
+                Data stays local
+              </div>
+              <div class="trust-item">
+                <div class="trust-dot"></div>
+                No account needed
+              </div>
+            </div>
+          </div>
+
+          <!-- CSS App Mockup -->
+          <div class="hero-visual fade-in fade-delay-3">
+            <div class="app-window">
+              <div class="app-glare" id="appGlare"></div>
+              <div class="app-titlebar">
+                <div class="titlebar-btn tb-close"></div>
+                <div class="titlebar-btn tb-min"></div>
+                <div class="titlebar-btn tb-max"></div>
+                <span class="titlebar-title">Digital Wellbeing</span>
+              </div>
+              <div class="app-body">
+                <div class="app-sidebar">
+                  <div class="sidebar-item active">
+                    <span class="sidebar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Dashboard
+                  </div>
+                  <div class="sidebar-item">
+                    <span class="sidebar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> App Limits
+                  </div>
+                  <div class="sidebar-item">
+                    <span class="sidebar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span> Focus Mode
+                  </div>
+                  <div class="sidebar-item">
+                    <span class="sidebar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Weekly Report
+                  </div>
+                </div>
+                <div class="app-main">
+                  <div class="app-stats-row">
+                    <div class="app-stat-card">
+                      <div class="stat-label">Today</div>
+                      <div class="stat-value purple">4h 32m</div>
+                    </div>
+                    <div class="app-stat-card">
+                      <div class="stat-label">Focus</div>
+                      <div class="stat-value cyan">1h 25m</div>
+                    </div>
+                    <div class="app-stat-card">
+                      <div class="stat-label">Streak</div>
+                      <div class="stat-value green">7 days</div>
+                    </div>
+                  </div>
+                  <div class="app-chart-label">Hourly usage today</div>
+                  <div class="app-chart">
+                    <div class="chart-bar" style="height: 20%"></div>
+                    <div class="chart-bar" style="height: 15%"></div>
+                    <div class="chart-bar" style="height: 35%"></div>
+                    <div class="chart-bar" style="height: 60%"></div>
+                    <div class="chart-bar" style="height: 80%"></div>
+                    <div class="chart-bar today" style="height: 100%"></div>
+                    <div class="chart-bar" style="height: 70%"></div>
+                    <div class="chart-bar" style="height: 50%"></div>
+                    <div class="chart-bar" style="height: 40%"></div>
+                    <div class="chart-bar" style="height: 30%"></div>
+                    <div class="chart-bar" style="height: 20%"></div>
+                    <div class="chart-bar" style="height: 10%"></div>
+                  </div>
+                  <div class="app-list">
+                    <div class="app-list-item">
+                      <span class="app-name">VS Code</span>
+                      <div class="app-bar-track">
+                        <div class="app-bar-fill" style="width: 85%"></div>
+                      </div>
+                      <span class="app-time">2h 10m</span>
+                    </div>
+                    <div class="app-list-item">
+                      <span class="app-name">Chrome</span>
+                      <div class="app-bar-track">
+                        <div class="app-bar-fill" style="width: 55%"></div>
+                      </div>
+                      <span class="app-time">1h 24m</span>
+                    </div>
+                    <div class="app-list-item">
+                      <span class="app-name">Slack</span>
+                      <div class="app-bar-track">
+                        <div class="app-bar-fill" style="width: 30%"></div>
+                      </div>
+                      <span class="app-time">46m</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── STATS BAR ── -->
+    <div class="container">
+      <div class="stats-bar">
+        <div class="stats-bar-inner glass">
+          <div class="stat-pill">
+            <div class="stat-pill-icon pill-purple"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg></div>
+            100% Free, forever
+          </div>
+          <div class="stat-pill">
+            <div class="stat-pill-icon pill-cyan"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
+            Windows 10 & 11
+          </div>
+          <div class="stat-pill">
+            <div class="stat-pill-icon pill-green"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+            All data stored locally
+          </div>
+          <div class="stat-pill">
+            <div class="stat-pill-icon pill-pink"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            Auto-updates silently
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FEATURES ── -->
+    <section class="features" id="features">
+      <div class="container">
+        <div class="text-center fade-in">
+          <div class="section-tag">✦ Features</div>
+          <h2 class="section-title">
+            Everything you need.<br />Nothing you don't.
+          </h2>
+          <p class="section-sub">
+            Six powerful tools working together, all running silently in the
+            background.
+          </p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card glass fade-in fade-delay-1">
+            <div class="feature-icon icon-purple"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+            <h3 class="feature-title">Screen Time Tracking</h3>
+            <p class="feature-desc">
+              Polls the active window every 5 seconds. Records app usage to a
+              local SQLite database — no cloud sync, no privacy risk. See
+              exactly where your time goes.
+            </p>
+          </div>
+          <div class="feature-card glass fade-in fade-delay-2">
+            <div class="feature-icon icon-cyan"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <h3 class="feature-title">App Limits</h3>
+            <p class="feature-desc">
+              Set daily time limits per app. Get warned at 80% and blocked at
+              100%. Visual progress bars show exactly how close you are to your
+              limit in real time.
+            </p>
+          </div>
+          <div class="feature-card glass fade-in fade-delay-3">
+            <div class="feature-icon icon-pink"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+            <h3 class="feature-title">Focus Mode</h3>
+            <p class="feature-desc">
+              Pomodoro timer with 25/5/15 min modes. Aggressive app blocking
+              kills non-whitelisted processes every second while a session is
+              active. No exceptions.
+            </p>
+          </div>
+          <div class="feature-card glass fade-in fade-delay-1">
+            <div class="feature-icon icon-green"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="18"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="16" y1="16" x2="16" y2="18"/></svg></div>
+            <h3 class="feature-title">Weekly Reports</h3>
+            <p class="feature-desc">
+              7-day bar chart, streak tracking, and productive vs. distraction
+              breakdown. Understand your patterns and see week-over-week
+              improvement.
+            </p>
+          </div>
+          <div class="feature-card glass fade-in fade-delay-2">
+            <div class="feature-icon icon-orange"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+            <h3 class="feature-title">System Tray Mode</h3>
+            <p class="feature-desc">
+              Runs silently in the background. Window hides on close. Tray icon
+              gives instant access. Auto-launches at Windows startup so tracking
+              never misses a beat.
+            </p>
+          </div>
+          <div class="feature-card glass fade-in fade-delay-3">
+            <div class="feature-icon icon-blue"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/></svg></div>
+            <h3 class="feature-title">Auto-Updates</h3>
+            <p class="feature-desc">
+              Checks GitHub Releases every 4 hours. Shows a download progress
+              banner inside the app. One-click relaunch installs the latest
+              version — always stay current.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── HOW IT WORKS ── -->
+    <section class="how" id="how">
+      <div class="container">
+        <div class="text-center fade-in">
+          <div class="section-tag">✦ How it works</div>
+          <h2 class="section-title">Up and running<br />in 60 seconds.</h2>
+          <p class="section-sub">
+            Install, launch, and start tracking. No configuration required to
+            get started.
+          </p>
+        </div>
+        <div class="timeline-wrapper" id="timelineWrapper">
+          <div class="timeline-track">
+            <div class="timeline-line-bg"></div>
+            <div class="timeline-line-fill" id="timelineFill"></div>
+            <div class="timeline-orb" id="timelineOrb"></div>
+          </div>
+          <div class="timeline-item" id="timelineItem0">
+            <div class="timeline-dot step-1-dot">1</div>
+            <div class="step-card glass timeline-card">
+              <h3 class="step-title">Download & Install</h3>
+              <p class="step-desc">Run the NSIS installer — no admin tricks, no bloatware. Pick your install directory, click Next twice, done. Takes under 30 seconds.</p>
+            </div>
+          </div>
+          <div class="timeline-item" id="timelineItem1">
+            <div class="timeline-dot step-2-dot">2</div>
+            <div class="step-card glass timeline-card">
+              <h3 class="step-title">Track Automatically</h3>
+              <p class="step-desc">The app launches into your system tray and starts tracking immediately. No setup needed — it silently records every app you use in the background.</p>
+            </div>
+          </div>
+          <div class="timeline-item" id="timelineItem2">
+            <div class="timeline-dot step-3-dot">3</div>
+            <div class="step-card glass timeline-card">
+              <h3 class="step-title">Set Limits & Focus</h3>
+              <p class="step-desc">Open the app from the tray to set app limits and start Pomodoro sessions. Check your weekly report on Sundays and watch your productivity streak grow.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DOWNLOAD CTA ── -->
+    <section class="download" id="download">
+      <div class="container">
+        <div class="download-card glass fade-in">
+          <div class="section-tag" style="display: inline-flex">
+            ✦ Free Download
+          </div>
+          <h2 class="section-title">
+            Stop watching time disappear.<br />
+            <span
+              style="
+                background: var(--grad-text);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+              "
+              >Start owning it.</span
+            >
+          </h2>
+          <p class="download-sub">
+            Digital Wellbeing v2.1.0 — Free, open-source, Windows 10/11. No
+            account, no cloud, no subscription. Your data never leaves your
+            machine.
+          </p>
+          <div class="download-actions" id="ctaDlWrap">
+            <a
+              id="ctaDlBtn"
+              href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/releases/latest/download/Digital-Wellbeing-Setup-2.1.0.exe"
+              class="btn-primary-lg"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download for Windows — Free
+            </a>
+            <a
+              href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/releases"
+              target="_blank"
+              rel="noopener"
+              class="btn-ghost"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              View all releases
+            </a>
+          </div>
+          <p class="download-meta">
+            <span>v2.1.0</span>·<span>Windows 10 / 11 (x64)</span>·<span
+              >~60MB installer</span
+            >·<span>Open source on GitHub</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer>
+      <div class="container">
+        <div class="footer-inner">
+          <div class="footer-logo">
+            <div class="logo-dot-sm"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            Digital Wellbeing
+          </div>
+          <div class="footer-links">
+            <a
+              href="https://github.com/Sainikhil-315/digital-wellbeing-desktop"
+              target="_blank"
+              rel="noopener"
+              >GitHub</a
+            >
+            <a
+              href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/releases"
+              target="_blank"
+              rel="noopener"
+              >Releases</a
+            >
+            <a
+              href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/issues"
+              target="_blank"
+              rel="noopener"
+              >Report a Bug</a
+            >
+          </div>
+          <p class="footer-copy">
+            Free & open source · Built with Electron + React
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // ── Mobile block ──
+      (function () {
+        const ua = navigator.userAgent;
+        const isMobile =
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+          ('ontouchstart' in window && window.screen.width < 1024);
+        if (!isMobile) return;
+
+        document.body.style.overflow = 'hidden';
+        const block = document.createElement('div');
+        block.id = 'mobileBlock';
+        block.innerHTML = `
+          <div class="mobile-block-card glass">
+            <div class="mobile-block-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </div>
+            <h2 class="mobile-block-title">Desktop Only</h2>
+            <p class="mobile-block-sub">
+              Digital Wellbeing is a Windows desktop app.<br><br>
+              Open this page on your Windows PC to download and install it.
+            </p>
+          </div>`;
+        document.body.appendChild(block);
+      })();
+
+      // ── OS detection — Windows-only download ──
+      (function () {
+        const ua = navigator.userAgent;
+        const isWindows = /Windows/i.test(ua);
+        if (isWindows) return;
+
+        const isMac  = /Macintosh|Mac OS X/i.test(ua);
+        const roadmap = isMac
+          ? 'A macOS version is on the roadmap — follow the GitHub repo for updates.'
+          : 'Currently Windows 10/11 only. Other platforms are on the roadmap.';
+
+        function makeNotice(lg) {
+          const sz = lg ? 22 : 18;
+          const d = document.createElement('div');
+          d.className = 'not-win-notice' + (lg ? ' not-win-notice-lg' : '');
+          d.innerHTML = `
+            <div class="not-win-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div>
+              <div class="not-win-title">Windows Only</div>
+              <p class="not-win-sub">${roadmap}</p>
+            </div>`;
+          return d;
+        }
+
+        const heroBtn = document.getElementById('heroDlBtn');
+        if (heroBtn) heroBtn.replaceWith(makeNotice(false));
+
+        const ctaBtn = document.getElementById('ctaDlBtn');
+        if (ctaBtn) ctaBtn.replaceWith(makeNotice(true));
+      })();
+
+      // ── Scroll fade-in ──
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add('visible');
+            } else {
+              e.target.classList.remove('visible');
+            }
+          });
+        },
+        { threshold: 0.12 },
+      );
+      document
+        .querySelectorAll(".fade-in")
+        .forEach((el) => observer.observe(el));
+      document.querySelectorAll(".hero .fade-in").forEach((el) => {
+        setTimeout(() => el.classList.add("visible"), 100);
+      });
+
+      // ── Timeline scroll animation ──
+  (function initTimeline() {
+    const wrapper = document.getElementById('timelineWrapper');
+    const fillEl  = document.getElementById('timelineFill');
+    const orbEl   = document.getElementById('timelineOrb');
+    if (!wrapper || !fillEl) return;
+
+    const items = ['timelineItem0','timelineItem1','timelineItem2']
+      .map(id => document.getElementById(id));
+
+    function getProgress() {
+      const r   = wrapper.getBoundingClientRect();
+      const vh  = window.innerHeight;
+      // start filling when wrapper top hits 75vh, finish when bottom at 25vh
+      const scrolled    = vh * 0.75 - r.top;
+      const totalTravel = r.height + vh * 0.5;
+      return Math.max(0, Math.min(1, scrolled / totalTravel));
+    }
+
+    function update() {
+      const p = getProgress();
+      const pct = (p * 100).toFixed(2);
+      fillEl.style.height = pct + '%';
+      orbEl.style.top     = pct + '%';
+
+      const wRect = wrapper.getBoundingClientRect();
+      items.forEach(item => {
+        if (!item) return;
+        const dot  = item.querySelector('.timeline-dot');
+        const card = item.querySelector('.timeline-card');
+        const dRect = dot.getBoundingClientRect();
+        // dot center as fraction of wrapper height
+        const dotFrac = (dRect.top + dRect.height * 0.5 - wRect.top) / wrapper.offsetHeight;
+        if (p >= dotFrac - 0.03) {
+          dot.classList.add('active');
+          card.classList.add('visible');
+        } else {
+          dot.classList.remove('active');
+          card.classList.remove('visible');
+        }
+      });
+    }
+
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+
+  // ── App window: wave idle + mouse-tracking 3D tilt ──
+      const heroVisual = document.querySelector(".hero-visual");
+      const appWindow = document.querySelector(".app-window");
+      const appGlare = document.getElementById("appGlare");
+
+      let rotX = 4,
+        rotY = -8,
+        transY = 0;
+      let targetRotX = 4,
+        targetRotY = -8;
+      let isHovering = false;
+      let startTime = null;
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function tick(ts) {
+        if (!startTime) startTime = ts;
+        const t = (ts - startTime) * 0.001;
+
+        // Idle wave: sinusoidal multi-axis sway
+        const idleRotY = -8 + Math.sin(t * 0.6) * 4;
+        const idleRotX = 4 + Math.sin(t * 0.9) * 2.5;
+        const idleTransY = Math.sin(t * 0.7) * 14;
+
+        if (isHovering) {
+          rotX = lerp(rotX, targetRotX, 0.07);
+          rotY = lerp(rotY, targetRotY, 0.07);
+          transY = lerp(transY, 0, 0.05);
+        } else {
+          rotX = lerp(rotX, idleRotX, 0.04);
+          rotY = lerp(rotY, idleRotY, 0.04);
+          transY = lerp(transY, idleTransY, 0.04);
+        }
+
+        appWindow.style.transform = `rotateY(${rotY.toFixed(2)}deg) rotateX(${rotX.toFixed(2)}deg) translateY(${transY.toFixed(2)}px)`;
+
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+
+      heroVisual.addEventListener("mousemove", (e) => {
+        isHovering = true;
+        const r = heroVisual.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const nx = (e.clientX - cx) / (r.width / 2); // -1 to 1
+        const ny = (e.clientY - cy) / (r.height / 2); // -1 to 1
+        targetRotY = nx * 18 - 4;
+        targetRotX = -ny * 14 + 2;
+
+        // Move glare opposite to tilt for realism
+        const gx = 50 - nx * 30;
+        const gy = 50 - ny * 30;
+        appGlare.style.background = `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,255,255,0.11) 0%, transparent 55%)`;
+      });
+
+      heroVisual.addEventListener("mouseleave", () => {
+        isHovering = false;
+        appGlare.style.background =
+          "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.08) 0%, transparent 60%)";
+      });
+    </script>
+  </body>
+</html>
