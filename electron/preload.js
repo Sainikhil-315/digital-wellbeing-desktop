@@ -11,9 +11,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveSession:     (session) => ipcRenderer.invoke('save-session', session),
   getStats:        () => ipcRenderer.invoke('get-stats'),
 
-  getSettings:     () => ipcRenderer.invoke('get-settings'),
-  saveSetting:     (data) => ipcRenderer.invoke('save-setting', data),
-  exportCsv:       () => ipcRenderer.invoke('export-csv'),
+  getSettings:          () => ipcRenderer.invoke('get-settings'),
+  saveSetting:          (data) => ipcRenderer.invoke('save-setting', data),
+  exportCsv:            () => ipcRenderer.invoke('export-csv'),
+  snoozeApp:            (data) => ipcRenderer.invoke('snooze-app', data),
+  updateAppKillToggle:  (data) => ipcRenderer.invoke('update-app-kill-toggle', data),
 
   windowMinimize: () => ipcRenderer.invoke('window-minimize'),
   windowMaximize: () => ipcRenderer.invoke('window-maximize'),

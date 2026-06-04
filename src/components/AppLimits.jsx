@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { IconPlus, IconX, IconClockPause, IconPencil, IconCheck } from '@tabler/icons-react'
+import { IconPlus, IconX, IconClockPause, IconPencil, IconCheck, IconBell, IconBellOff, IconClock } from '@tabler/icons-react'
 import './AppLimits.css'
 
 function fmtSeconds(s) {
@@ -8,6 +8,11 @@ function fmtSeconds(s) {
   const m = Math.floor((s % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
+}
+
+function fmtSnoozeRemaining(snoozeUntil) {
+  const remaining = Math.ceil((snoozeUntil - Date.now()) / 60000)
+  return remaining > 0 ? `Snoozed ${remaining}m` : null
 }
 
 function getStatus(used, limit) {
@@ -32,9 +37,10 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
   const [newMins, setNewMins] = useState('0')
   const [newProd, setNewProd] = useState(false)
   const [newCategory, setNewCategory] = useState('Other')
+  const [newKillOnExceeded, setNewKillOnExceeded] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [editingApp, setEditingApp] = useState(null)  // app_name being edited inline
+  const [editingApp, setEditingApp] = useState(null)
   const [editHours, setEditHours] = useState('1')
   const [editMins, setEditMins] = useState('0')
   const [editSaving, setEditSaving] = useState(false)
@@ -51,7 +57,6 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
     }).catch(() => {}).finally(() => setLoading(false))
   }, [refreshKey])
 
-  // Apps that already have a limit should not appear in the "add" dropdown
   const availableApps = trackedApps.filter(app => !limits.some(l => l.app_name === app))
 
   async function addLimit() {
@@ -59,9 +64,16 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
     const secs = (parseInt(newHours) || 0) * 3600 + (parseInt(newMins) || 0) * 60
     if (secs === 0) return
     setSaving(true)
-    await api.setLimit({ app_name: newApp.trim(), limit_seconds: secs, is_productive: newProd, category: newCategory })
+    await api.setLimit({
+      app_name: newApp.trim(),
+      limit_seconds: secs,
+      is_productive: newProd,
+      category: newCategory,
+      kill_on_exceeded: newKillOnExceeded
+    })
     setSaving(false)
-    setNewApp(''); setNewHours('1'); setNewMins('0'); setNewProd(false); setNewCategory('Other')
+    setNewApp(''); setNewHours('1'); setNewMins('0')
+    setNewProd(false); setNewCategory('Other'); setNewKillOnExceeded(true)
     setShowAdd(false)
     onRefresh()
   }
@@ -79,9 +91,7 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
     setEditingApp(l.app_name)
   }
 
-  function cancelEdit() {
-    setEditingApp(null)
-  }
+  function cancelEdit() { setEditingApp(null) }
 
   async function saveEdit(l) {
     const secs = (parseInt(editHours) || 0) * 3600 + (parseInt(editMins) || 0) * 60
@@ -91,10 +101,22 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
       app_name: l.app_name,
       limit_seconds: secs,
       is_productive: l.is_productive,
-      category: l.category || 'Other'
+      category: l.category || 'Other',
+      kill_on_exceeded: l.kill_on_exceeded
     })
     setEditSaving(false)
     setEditingApp(null)
+    onRefresh()
+  }
+
+  async function toggleKill(l) {
+    const newVal = l.kill_on_exceeded === 0 ? 1 : 0
+    await api.updateAppKillToggle({ app_name: l.app_name, kill_on_exceeded: newVal })
+    onRefresh()
+  }
+
+  async function snooze(app_name) {
+    await api.snoozeApp({ app_name, minutes: 15 })
     onRefresh()
   }
 
@@ -103,7 +125,7 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
   return (
     <div className="app-limits">
       <div className="limits-header">
-        <p className="limits-desc">Set daily time limits per app. You'll get a notification at 80% and when the limit is hit — the app will be closed automatically.</p>
+        <p className="limits-desc">Set daily time limits per app. Notifications fire at 50%, 80%, 95%, and 100% — exceeded apps close or stay open based on per-app setting.</p>
         <button className="btn-add" onClick={() => setShowAdd(v => !v)}>
           <IconPlus size={16} /> Add limit
         </button>
@@ -152,6 +174,12 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
               {newProd ? 'Yes' : 'No'}
             </button>
           </div>
+          <div className="form-row form-row-inline">
+            <label>Close when exceeded</label>
+            <button className={`toggle-btn ${newKillOnExceeded ? 'on' : ''}`} onClick={() => setNewKillOnExceeded(v => !v)}>
+              {newKillOnExceeded ? 'Yes' : 'No (notify only)'}
+            </button>
+          </div>
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setShowAdd(false)}>Cancel</button>
             <button className="btn-save" onClick={addLimit} disabled={saving || !newApp}>
@@ -174,6 +202,9 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
             const pct = Math.min(100, Math.round((l.used_seconds / l.limit_seconds) * 100))
             const barColor = status === 'exceeded' ? 'var(--red)' : status === 'warn' ? 'var(--amber)' : l.is_productive ? 'var(--green)' : 'var(--blue)'
             const isEditing = editingApp === l.app_name
+            const isSnoozed = l.snooze_until && l.snooze_until > Date.now()
+            const snoozeLabel = isSnoozed ? fmtSnoozeRemaining(l.snooze_until) : null
+            const isHardLimit = l.kill_on_exceeded !== 0
 
             return (
               <div key={l.app_name} className={`limit-item card ${status === 'exceeded' ? 'limit-exceeded' : ''}`}>
@@ -184,12 +215,22 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
                       <span className="pill pill-blue">{l.category}</span>
                     )}
                     {l.is_productive === 1 && <span className="pill pill-green">Productive</span>}
+                    {isSnoozed && snoozeLabel && (
+                      <span className="pill pill-amber"><IconClock size={10} /> {snoozeLabel}</span>
+                    )}
                   </div>
                   <div className="limit-right">
                     <span className={`pill pill-${status === 'exceeded' ? 'red' : status === 'warn' ? 'amber' : 'green'}`}>
                       {status === 'exceeded' ? 'Exceeded' : status === 'warn' ? `${pct}%` : 'OK'}
                     </span>
-                    {/* Inline edit trigger */}
+                    {/* Kill toggle */}
+                    <button
+                      className={`kill-toggle-btn ${isHardLimit ? 'hard' : 'soft'}`}
+                      onClick={() => toggleKill(l)}
+                      title={isHardLimit ? 'Hard limit: app closes when exceeded. Click to make soft.' : 'Soft limit: notify only. Click to make hard.'}
+                    >
+                      {isHardLimit ? <IconBell size={13} /> : <IconBellOff size={13} />}
+                    </button>
                     {!isEditing && (
                       <button className="edit-btn" onClick={() => startEdit(l)} title="Edit limit">
                         <IconPencil size={14} />
@@ -227,11 +268,7 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
                     </div>
                     <div className="edit-actions">
                       <button className="btn-cancel btn-cancel-sm" onClick={cancelEdit}>Cancel</button>
-                      <button
-                        className="btn-save btn-save-sm"
-                        onClick={() => saveEdit(l)}
-                        disabled={editSaving}
-                      >
+                      <button className="btn-save btn-save-sm" onClick={() => saveEdit(l)} disabled={editSaving}>
                         <IconCheck size={13} />
                         {editSaving ? 'Saving...' : 'Update'}
                       </button>
@@ -240,7 +277,14 @@ export default function AppLimits({ api, refreshKey, onRefresh }) {
                 ) : (
                   <div className="limit-footer">
                     <span className="mono">{fmtSeconds(l.used_seconds)} used</span>
-                    <span className="mono muted">limit: {fmtSeconds(l.limit_seconds)}</span>
+                    <div className="limit-footer-right">
+                      {status === 'exceeded' && !isSnoozed && (
+                        <button className="snooze-btn" onClick={() => snooze(l.app_name)}>
+                          <IconClock size={11} /> Snooze 15m
+                        </button>
+                      )}
+                      <span className="mono muted">limit: {fmtSeconds(l.limit_seconds)}</span>
+                    </div>
                   </div>
                 )}
               </div>

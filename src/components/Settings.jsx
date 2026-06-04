@@ -109,8 +109,8 @@ export default function Settings({ api }) {
         </div>
         <div className="settings-row">
           <div className="settings-label">
-            <div className="settings-label-title">Warning threshold</div>
-            <div className="settings-label-desc">Get notified when usage reaches this percentage of your limit</div>
+            <div className="settings-label-title">Primary warning threshold</div>
+            <div className="settings-label-desc">Main alert fires when usage hits this % of your daily limit</div>
           </div>
           <div className="settings-control">
             <select
@@ -126,22 +126,61 @@ export default function Settings({ api }) {
         </div>
         <div className="settings-row">
           <div className="settings-label">
-            <div className="settings-label-title">Close app when limit exceeded</div>
-            <div className="settings-label-desc">
-              Automatically close the app and show a dialog when daily limit is hit.
-              Turn off if you want a gentle reminder instead — app stays open.
-            </div>
+            <div className="settings-label-title">50% warning</div>
+            <div className="settings-label-desc">Also notify when you're halfway through your daily limit</div>
           </div>
           <div className="settings-control">
             <button
-              className={`toggle-btn ${settings.kill_on_exceeded !== 'false' ? 'on' : ''}`}
-              onClick={() => save('kill_on_exceeded', settings.kill_on_exceeded === 'false' ? 'true' : 'false')}
-              disabled={saving.kill_on_exceeded}
+              className={`toggle-btn ${settings.warn_step_lo === 'true' ? 'on' : ''}`}
+              onClick={() => save('warn_step_lo', settings.warn_step_lo === 'true' ? 'false' : 'true')}
+              disabled={saving.warn_step_lo || settings.notify_enabled === 'false'}
             >
-              {settings.kill_on_exceeded !== 'false' ? 'On' : 'Off'}
+              {settings.warn_step_lo === 'true' ? 'On' : 'Off'}
             </button>
-            {saved.kill_on_exceeded && <span className="saved-badge">Saved</span>}
+            {saved.warn_step_lo && <span className="saved-badge">Saved</span>}
           </div>
+        </div>
+        <div className="settings-row">
+          <div className="settings-label">
+            <div className="settings-label-title">95% warning</div>
+            <div className="settings-label-desc">Final warning when only 5% of your limit remains</div>
+          </div>
+          <div className="settings-control">
+            <button
+              className={`toggle-btn ${settings.warn_step_hi !== 'false' ? 'on' : ''}`}
+              onClick={() => save('warn_step_hi', settings.warn_step_hi === 'false' ? 'true' : 'false')}
+              disabled={saving.warn_step_hi || settings.notify_enabled === 'false'}
+            >
+              {settings.warn_step_hi !== 'false' ? 'On' : 'Off'}
+            </button>
+            {saved.warn_step_hi && <span className="saved-badge">Saved</span>}
+          </div>
+        </div>
+        <div className="settings-row">
+          <div className="settings-label">
+            <div className="settings-label-title">Grace period</div>
+            <div className="settings-label-desc">
+              When a limit is hit, warn first and wait this long before closing the app.
+              Gives you time to save your work. Applies only to hard limits.
+            </div>
+          </div>
+          <div className="settings-control">
+            <select
+              className="settings-select"
+              value={settings.grace_period_mins || '0'}
+              onChange={e => save('grace_period_mins', e.target.value)}
+              disabled={saving.grace_period_mins}
+            >
+              <option value="0">None — close immediately</option>
+              <option value="5">5 minutes</option>
+              <option value="10">10 minutes</option>
+              <option value="15">15 minutes</option>
+            </select>
+            {saved.grace_period_mins && <span className="saved-badge">Saved</span>}
+          </div>
+        </div>
+        <div className="settings-info-row">
+          <span>Per-app close behavior (hard vs soft) is set on each limit card in App Limits.</span>
         </div>
       </section>
 

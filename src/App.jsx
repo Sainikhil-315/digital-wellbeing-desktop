@@ -30,6 +30,8 @@ const api = window.electronAPI || {
   getSettings: async () => ({}),
   saveSetting: async () => {},
   exportCsv: async () => ({ ok: false }),
+  snoozeApp: async () => {},
+  updateAppKillToggle: async () => {},
   windowMinimize: () => {},
   windowMaximize: () => {},
   windowClose: () => {},
@@ -56,7 +58,6 @@ const NAV = [
   { id: 'limits',    label: 'App Limits',    icon: IconClockPause },
   { id: 'focus',     label: 'Focus Mode',    icon: IconFocus2 },
   { id: 'weekly',    label: 'Weekly Report', icon: IconCalendarStats },
-  { id: 'settings',  label: 'Settings',      icon: IconSettings },
 ]
 
 export default function App() {
@@ -141,6 +142,15 @@ export default function App() {
             </div>
           )}
 
+          {/* Settings button below stats */}
+          <button
+            className={`nav-item settings-nav-btn ${tab === 'settings' ? 'active' : ''}`}
+            onClick={() => setTab('settings')}
+          >
+            <IconSettings size={20} />
+            <span>Settings</span>
+          </button>
+
           <UpdateBanner />
         </aside>
 
@@ -148,7 +158,7 @@ export default function App() {
         <main className="content-area">
           <div className="content-header">
             <div className="content-title">
-              {NAV.find(n => n.id === tab)?.label}
+              {tab === 'settings' ? 'Settings' : NAV.find(n => n.id === tab)?.label}
             </div>
             <div className="content-date mono">
               {new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })}
