@@ -209,3 +209,43 @@
 .limit-exceeded {
   border-color: var(--red-dim);
 }
+
+/* Kill toggle button (bell icon per-app) */
+.kill-toggle-btn {
+  background: none;
+  border: none;
+  padding: 2px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.kill-toggle-btn.hard { color: var(--blue); }
+.kill-toggle-btn.soft { color: var(--text-muted); }
+.kill-toggle-btn:hover { background: var(--bg-raised); }
+
+/* Snooze button */
+.snooze-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--amber-dim);
+  background: var(--amber-dim);
+  color: var(--amber);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.snooze-btn:hover { opacity: 0.8; }
+
+.limit-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

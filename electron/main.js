@@ -10,6 +10,7 @@ let trackerInterval = null
 let focusModeActive = false
 let whitelistedApps = []
 let focusModeInterval = null
+const graceTimers = new Map() // appName → setTimeout id
 
 
 function setupAutoUpdater() {
@@ -114,10 +115,7 @@ app.whenReady().then(async () => {
       tracker.pollActiveWindow((appName) => {
         if (appName) {
           db.recordUsage(appName)
-          const currentSettings = db.getAllSettings()
-          if (currentSettings.notify_enabled !== 'false') {
-            checkLimitAlerts(appName, db, parseFloat(currentSettings.notify_warn_pct || '0.8'))
-          }
+          checkLimitAlerts(appName, db)
         }
       })
     }, intervalMs)
@@ -137,52 +135,111 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   if (trackerInterval) clearInterval(trackerInterval)
+  graceTimers.forEach(timer => clearTimeout(timer))
+  graceTimers.clear()
 })
 
 app.on('activate', () => {
   showWindow()
 })
 
-function checkLimitAlerts(appName, db, warnPct = 0.8) {
+function checkLimitAlerts(appName, db) {
   const limits = db.getLimitsWithUsage()
   const limit = limits.find(l => l.app_name.toLowerCase() === appName.toLowerCase())
   if (!limit) return
 
+  const settings = db.getAllSettings()
+  if (settings.notify_enabled === 'false') return
+
   const pct = limit.used_seconds / limit.limit_seconds
+  const now = Date.now()
+
+  // --- 100% exceeded ---
   if (pct >= 1.0 && limit.notified_exceeded !== 1) {
+    // Respect snooze
+    if (limit.snooze_until > now) return
+
     db.markNotified(appName, 'exceeded')
 
     const limitMins = Math.round(limit.limit_seconds / 60)
-    const shouldKill = db.getSetting('kill_on_exceeded', 'true') === 'true'
+    const shouldKill = limit.kill_on_exceeded !== 0  // per-app toggle
     const tracker = require('./tracker')
     const processName = tracker.getProcessNameFor(appName)
+    const graceMins = parseInt(settings.grace_period_mins || '0')
 
-    if (shouldKill && processName) {
-      // Kill first, then show blocking dialog
-      killProcess(processName)
+    function showExceededDialog() {
       dialog.showMessageBox({
         type: 'warning',
         title: 'Daily Limit Reached',
         message: `Time's up for ${appName} today.`,
-        detail: `You've used your full ${limitMins}m daily limit for ${appName}.\n\nCome back tomorrow — your session resets at midnight. Want more time? You can always update your limits in Digital Wellbeing.`,
-        buttons: ['Got it', 'Edit Limits'],
+        detail: `You've used your full ${limitMins}m daily limit.\n\nCome back tomorrow — resets at midnight. Need more time? Update your limits in Digital Wellbeing.`,
+        buttons: ['Got it', 'Snooze 15 min', 'Edit Limits'],
         defaultId: 0,
         cancelId: 0,
       }).then(({ response }) => {
-        if (response === 1) showWindow()
+        if (response === 1) db.snoozeApp(appName, 15)
+        if (response === 2) showWindow()
       })
+    }
+
+    if (shouldKill && processName) {
+      if (graceMins > 0 && !graceTimers.has(appName)) {
+        // Grace period — warn, then kill after delay
+        new Notification({
+          title: `${appName} — Limit Reached`,
+          body: `You have a ${graceMins}-minute grace period. Save your work — app closes soon.`
+        }).show()
+        const timer = setTimeout(() => {
+          graceTimers.delete(appName)
+          killProcess(processName)
+          showExceededDialog()
+        }, graceMins * 60 * 1000)
+        graceTimers.set(appName, timer)
+      } else if (!graceTimers.has(appName)) {
+        // No grace — kill immediately
+        killProcess(processName)
+        showExceededDialog()
+      }
     } else {
-      // Soft mode — notify only, app keeps running
+      // Soft limit — notify only, app stays open
       new Notification({
         title: `${appName} — Daily Limit Reached`,
-        body: `You've used your full ${limitMins}m for today. The app is still open — disable "close on exceeded" in Settings.`
+        body: `Full ${limitMins}m used. Limit is set to notify-only so the app stays open.`
       }).show()
     }
-  } else if (pct >= warnPct && limit.notified_warn !== 1) {
+    return
+  }
+
+  // --- Warning steps ---
+  const remaining = Math.round((limit.limit_seconds - limit.used_seconds) / 60)
+
+  // 95% warning (high)
+  if (settings.warn_step_hi !== 'false' && pct >= 0.95 && limit.notified_hi !== 1) {
+    db.markNotified(appName, 'hi')
+    new Notification({
+      title: `${appName} — 95% of limit used`,
+      body: `Only ${remaining}m left for today.`
+    }).show()
+    return
+  }
+
+  // 80% warning (primary, from settings threshold)
+  const warnPct = parseFloat(settings.notify_warn_pct || '0.8')
+  if (pct >= warnPct && limit.notified_warn !== 1) {
     db.markNotified(appName, 'warn')
     new Notification({
-      title: `${appName} — ${Math.round(pct * 100)}% of daily limit used`,
-      body: `You have ${Math.round((limit.limit_seconds - limit.used_seconds) / 60)}m left for today.`
+      title: `${appName} — ${Math.round(pct * 100)}% of limit used`,
+      body: `${remaining}m remaining for today.`
+    }).show()
+    return
+  }
+
+  // 50% warning (low)
+  if (settings.warn_step_lo === 'true' && pct >= 0.5 && limit.notified_lo !== 1) {
+    db.markNotified(appName, 'lo')
+    new Notification({
+      title: `${appName} — halfway through daily limit`,
+      body: `${remaining}m remaining for today.`
     }).show()
   }
 }
@@ -216,9 +273,26 @@ function setupIPC(db, startTrackerInterval) {
   ipcMain.handle('get-weekly-usage', () => db.getWeeklyUsage())
   ipcMain.handle('get-hourly-usage', () => db.getHourlyUsage())
   ipcMain.handle('get-limits',       () => db.getLimitsWithUsage())
-  ipcMain.handle('set-limit',   (_, { app_name, limit_seconds, is_productive, category }) =>
-    db.setLimit(app_name, limit_seconds, is_productive, category))
-  ipcMain.handle('remove-limit', (_, { app_name }) => db.removeLimit(app_name))
+  ipcMain.handle('set-limit', (_, { app_name, limit_seconds, is_productive, category, kill_on_exceeded }) =>
+    db.setLimit(app_name, limit_seconds, is_productive, category, kill_on_exceeded))
+  ipcMain.handle('remove-limit', (_, { app_name }) => {
+    // Cancel any active grace timer for this app
+    if (graceTimers.has(app_name)) {
+      clearTimeout(graceTimers.get(app_name))
+      graceTimers.delete(app_name)
+    }
+    return db.removeLimit(app_name)
+  })
+  ipcMain.handle('snooze-app', (_, { app_name, minutes }) => {
+    // Cancel grace timer if active — snooze takes over
+    if (graceTimers.has(app_name)) {
+      clearTimeout(graceTimers.get(app_name))
+      graceTimers.delete(app_name)
+    }
+    return db.snoozeApp(app_name, minutes || 15)
+  })
+  ipcMain.handle('update-app-kill-toggle', (_, { app_name, kill_on_exceeded }) =>
+    db.updateAppKillToggle(app_name, kill_on_exceeded))
   ipcMain.handle('get-sessions', () => db.getSessions())
   ipcMain.handle('save-session', (_, session) => db.saveSession(session))
   ipcMain.handle('get-stats',    () => db.getStats())

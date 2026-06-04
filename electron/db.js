@@ -79,12 +79,17 @@ async function init() {
   `)
 
   // Migrations for existing DBs
-  try {
-    db.run(`ALTER TABLE app_limits ADD COLUMN last_notified_date TEXT DEFAULT ''`)
-  } catch (e) { /* already exists */ }
-  try {
-    db.run(`ALTER TABLE app_limits ADD COLUMN category TEXT DEFAULT 'Other'`)
-  } catch (e) { /* already exists */ }
+  const migrations = [
+    `ALTER TABLE app_limits ADD COLUMN last_notified_date TEXT DEFAULT ''`,
+    `ALTER TABLE app_limits ADD COLUMN category TEXT DEFAULT 'Other'`,
+    `ALTER TABLE app_limits ADD COLUMN kill_on_exceeded INTEGER DEFAULT 1`,
+    `ALTER TABLE app_limits ADD COLUMN snooze_until INTEGER DEFAULT 0`,
+    `ALTER TABLE app_limits ADD COLUMN notified_lo INTEGER DEFAULT 0`,
+    `ALTER TABLE app_limits ADD COLUMN notified_hi INTEGER DEFAULT 0`,
+  ]
+  for (const sql of migrations) {
+    try { db.run(sql) } catch (e) { /* already exists */ }
+  }
 
   setInterval(persist, 30000)
   // Reset notification flags at midnight daily
@@ -105,7 +110,11 @@ function resetDailyNotifications() {
   if (!db) return
   try {
     db.run(
-      `UPDATE app_limits SET notified_warn = 0, notified_exceeded = 0, last_notified_date = ?
+      `UPDATE app_limits SET
+        notified_warn = 0, notified_exceeded = 0,
+        notified_lo = 0, notified_hi = 0,
+        snooze_until = 0,
+        last_notified_date = ?
        WHERE last_notified_date != ?`,
       [today(), today()]
     )
@@ -207,24 +216,40 @@ function getLimitsWithUsage() {
     const used = usage.find(u => u.app_name.toLowerCase() === l.app_name.toLowerCase())
     return {
       ...l,
-      limit_seconds: Number(l.limit_seconds),
-      is_productive: Number(l.is_productive),
-      notified_warn: Number(l.notified_warn),
-      notified_exceeded: Number(l.notified_exceeded),
-      used_seconds: used ? Number(used.total_seconds) : 0
+      limit_seconds:      Number(l.limit_seconds),
+      is_productive:      Number(l.is_productive),
+      notified_warn:      Number(l.notified_warn),
+      notified_exceeded:  Number(l.notified_exceeded),
+      notified_lo:        Number(l.notified_lo || 0),
+      notified_hi:        Number(l.notified_hi || 0),
+      kill_on_exceeded:   l.kill_on_exceeded === undefined ? 1 : Number(l.kill_on_exceeded),
+      snooze_until:       Number(l.snooze_until || 0),
+      used_seconds:       used ? Number(used.total_seconds) : 0
     }
   })
 }
 
-function setLimit(app_name, limit_seconds, is_productive = 0, category = 'Other') {
+function setLimit(app_name, limit_seconds, is_productive = 0, category = 'Other', kill_on_exceeded = 1) {
   run(`
-    INSERT INTO app_limits (app_name, limit_seconds, is_productive, last_notified_date, category)
-    VALUES (?, ?, ?, '', ?)
+    INSERT INTO app_limits (app_name, limit_seconds, is_productive, last_notified_date, category, kill_on_exceeded)
+    VALUES (?, ?, ?, '', ?, ?)
     ON CONFLICT(app_name) DO UPDATE SET
       limit_seconds = excluded.limit_seconds,
       is_productive = excluded.is_productive,
-      category = excluded.category
-  `, [app_name, limit_seconds, is_productive ? 1 : 0, category])
+      category = excluded.category,
+      kill_on_exceeded = excluded.kill_on_exceeded
+  `, [app_name, limit_seconds, is_productive ? 1 : 0, category, kill_on_exceeded ? 1 : 0])
+  return { ok: true }
+}
+
+function snoozeApp(app_name, minutes) {
+  const snoozeUntil = Date.now() + minutes * 60 * 1000
+  run('UPDATE app_limits SET snooze_until = ? WHERE app_name = ?', [snoozeUntil, app_name])
+  return { ok: true }
+}
+
+function updateAppKillToggle(app_name, kill_on_exceeded) {
+  run('UPDATE app_limits SET kill_on_exceeded = ? WHERE app_name = ?', [kill_on_exceeded ? 1 : 0, app_name])
   return { ok: true }
 }
 
@@ -234,7 +259,13 @@ function removeLimit(app_name) {
 }
 
 function markNotified(app_name, type) {
-  const col = type === 'exceeded' ? 'notified_exceeded' : 'notified_warn'
+  const colMap = {
+    'exceeded': 'notified_exceeded',
+    'warn':     'notified_warn',
+    'lo':       'notified_lo',
+    'hi':       'notified_hi',
+  }
+  const col = colMap[type] || 'notified_warn'
   run(`UPDATE app_limits SET ${col} = 1, last_notified_date = ? WHERE app_name = ?`, [today(), app_name])
 }
 
@@ -313,7 +344,9 @@ function getAllSettings() {
     notify_enabled: 'true',
     notify_warn_pct: '0.8',
     data_retention_days: '90',
-    kill_on_exceeded: 'true'
+    grace_period_mins: '0',
+    warn_step_lo: 'false',
+    warn_step_hi: 'true',
   }
   const rows = query('SELECT key, value FROM settings')
   const stored = {}
@@ -346,5 +379,6 @@ module.exports = {
   init, recordUsage, getTodayUsage, getHourlyUsage, getWeeklyUsage,
   getLimits, getLimitsWithUsage, setLimit, removeLimit, markNotified,
   getSessions, saveSession, getStats,
-  getSetting, saveSetting, getAllSettings, exportUsageData, deleteOldData
+  getSetting, saveSetting, getAllSettings, exportUsageData, deleteOldData,
+  snoozeApp, updateAppKillToggle
 }

@@ -6,8 +6,6 @@ const os_module = require('os')
 
 const os = platform()
 
-// Static map: process name (lowercase) → friendly display name
-// These take priority over dynamic detection
 const STATIC_MAP = {
   'chrome':          'Google Chrome',
   'firefox':         'Firefox',
@@ -28,20 +26,15 @@ const STATIC_MAP = {
   'obs32':           'OBS Studio',
 }
 
-// Reverse of STATIC_MAP: friendly name (lowercase) → process name
 const STATIC_REVERSE = {}
 for (const [proc, name] of Object.entries(STATIC_MAP)) {
   STATIC_REVERSE[name.toLowerCase()] = proc
 }
 
-// Dynamic maps populated from live Get-Process query
-let dynamicMap = {}        // processName (lower) → displayName (for unknown apps)
-let dynamicReverse = {}    // displayName (lower) → processName
+let dynamicMap = {}
+let dynamicReverse = {}
 
 function extractDisplayName(title) {
-  // "Gmail - Google Chrome" → "Google Chrome"
-  // "index.js — VS Code"   → "VS Code"
-  // "Slack"                → "Slack"
   const parts = title.split(/ [–—-] /)
   return parts[parts.length - 1].trim() || title.trim()
 }
@@ -49,7 +42,7 @@ function extractDisplayName(title) {
 function refreshDynamicProcesses() {
   if (os !== 'win32') return
   exec(
-    'powershell -NoProfile -Command "Get-Process | Where-Object {$_.MainWindowTitle -ne \'\'} | Select-Object Name, MainWindowTitle | ConvertTo-Json -Compress"',
+    "powershell -NoProfile -Command \"Get-Process | Where-Object {$_.MainWindowTitle -ne ''} | Select-Object Name, MainWindowTitle | ConvertTo-Json -Compress\"",
     { timeout: 6000, maxBuffer: 512 * 1024 },
     (err, stdout) => {
       if (err || !stdout.trim()) return
@@ -61,11 +54,9 @@ function refreshDynamicProcesses() {
         for (const item of items) {
           if (!item || !item.Name || !item.MainWindowTitle) continue
           const procLower = item.Name.toLowerCase()
-          // Static map takes priority — skip known processes
           if (STATIC_MAP[procLower]) continue
           const displayName = extractDisplayName(item.MainWindowTitle)
           if (!displayName) continue
-          // Only store if not already mapped (first window title wins per process)
           if (!newMap[procLower]) {
             newMap[procLower] = displayName
             newReverse[displayName.toLowerCase()] = item.Name
@@ -73,27 +64,20 @@ function refreshDynamicProcesses() {
         }
         dynamicMap = newMap
         dynamicReverse = newReverse
-      } catch (e) { /* malformed JSON — ignore */ }
+      } catch (e) {}
     }
   )
 }
 
-// Run once at startup, then every 30s
 refreshDynamicProcesses()
 setInterval(refreshDynamicProcesses, 30000)
 
-// Returns process name (e.g. "chrome") for a given friendly name (e.g. "Google Chrome")
-// Used by main.js to kill apps. Returns null if unknown.
 function getProcessNameFor(friendlyName) {
   if (!friendlyName) return null
   const lower = friendlyName.toLowerCase()
-  if (STATIC_REVERSE[lower]) return STATIC_REVERSE[lower]
-  if (dynamicReverse[lower]) return dynamicReverse[lower]
-  return null
+  return STATIC_REVERSE[lower] || dynamicReverse[lower] || null
 }
 
-// Returns merged map of ALL known apps: { processName: displayName }
-// Used by focus mode to enumerate killable apps
 function getAllKnownApps() {
   const result = { ...STATIC_MAP }
   for (const [proc, name] of Object.entries(dynamicMap)) {
@@ -103,13 +87,9 @@ function getAllKnownApps() {
 }
 
 function pollActiveWindow(callback) {
-  if (os === 'win32') {
-    pollWindows(callback)
-  } else if (os === 'darwin') {
-    pollMacOS(callback)
-  } else {
-    pollLinux(callback)
-  }
+  if (os === 'win32') pollWindows(callback)
+  else if (os === 'darwin') pollMacOS(callback)
+  else pollLinux(callback)
 }
 
 function pollWindows(callback) {
@@ -131,9 +111,7 @@ public class WinUtil {
         IntPtr hwnd = GetForegroundWindow();
         GetWindowThreadProcessId(hwnd, out pid);
         if (pid > 0) {
-            try {
-                return Process.GetProcessById(pid).ProcessName;
-            } catch {}
+            try { return Process.GetProcessById(pid).ProcessName; } catch {}
         }
         return "";
     }
@@ -142,10 +120,8 @@ public class WinUtil {
 $proc = [WinUtil]::GetActiveProcessName()
 Write-Output $proc
 `
-
   const tempDir = os_module.tmpdir()
   const scriptPath = path.join(tempDir, 'get_active_window.ps1')
-
   try {
     fs.writeFileSync(scriptPath, scriptContent)
     exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`,
@@ -155,8 +131,7 @@ Write-Output $proc
         if (err) return
         const processName = stdout.trim()
         if (!processName) return
-        const cleanName = resolveProcessName(processName)
-        callback(cleanName)
+        callback(resolveProcessName(processName))
       }
     )
   } catch (e) {
@@ -166,13 +141,10 @@ Write-Output $proc
 
 function resolveProcessName(rawName) {
   const lower = rawName.toLowerCase()
-  // 1. Static map (exact or substring match for known apps)
   for (const [key, val] of Object.entries(STATIC_MAP)) {
     if (lower.includes(key)) return val
   }
-  // 2. Dynamic map (exact match from live process list)
   if (dynamicMap[lower]) return dynamicMap[lower]
-  // 3. Fallback: capitalize first letter of raw process name
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
 }
 

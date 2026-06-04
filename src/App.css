@@ -126,6 +126,11 @@
   border-radius: 10px;
 }
 
+.settings-nav-btn {
+  margin: 4px 8px 0;
+  width: calc(100% - 16px);
+}
+
 .sidebar-stats {
   margin: 12px 8px 4px;
   padding: 10px 12px;
