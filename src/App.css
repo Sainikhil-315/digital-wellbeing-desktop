@@ -231,3 +231,27 @@
   border-radius: 2px;
   transition: width 0.5s ease;
 }
+
+/* ── Error boundary ── */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  gap: 12px;
+}
+.error-boundary-msg {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.btn-retry {
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-retry:hover { background: var(--bg-hover); color: var(--text-primary); }

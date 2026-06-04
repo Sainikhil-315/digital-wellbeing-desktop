@@ -37,7 +37,8 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
   const [trackedApps, setTrackedApps] = useState([])
   const [selectedApps, setSelectedApps] = useState([])
   const [showAppSelector, setShowAppSelector] = useState(false)
-  
+  const [loadingSessions, setLoadingSessions] = useState(true)
+
   const canvasRef = useRef(null)
   const intervalRef = useRef(null)
   const secondIntervalRef = useRef(null)
@@ -46,14 +47,15 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
   const secondsCounterRef = useRef(0)
 
   useEffect(() => {
+    setLoadingSessions(true)
     Promise.all([
       api.getSessions(),
       api.getTodayUsage?.() || Promise.resolve([])
-    ]).then(([sessions, usage]) => {
-      setSessions(sessions)
+    ]).then(([s, usage]) => {
+      setSessions(s)
       const appNames = usage?.map(u => u.app_name) || []
       setTrackedApps([...new Set(appNames)].sort())
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setLoadingSessions(false))
   }, [refreshKey])
 
   useEffect(() => {
@@ -403,7 +405,9 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
 
         <div className="sessions-panel card">
         <div className="card-title">Today's sessions</div>
-        {sessions.length === 0 ? (
+        {loadingSessions ? (
+          <div className="empty-sessions">Loading...</div>
+        ) : sessions.length === 0 ? (
           <div className="empty-sessions">No sessions yet. Start focusing!</div>
         ) : (
           <div className="sessions-list">
@@ -422,7 +426,7 @@ export default function FocusMode({ api, refreshKey, onRefresh }) {
               </div>
             ))}
           </div>
-)}
+        )}
         </div>
       </div>
     </div>

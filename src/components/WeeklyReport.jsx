@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { IconTrendingUp, IconChartBar, IconFlame, IconLeaf, IconTarget, IconCalendarCheck } from '@tabler/icons-react'
+import { IconTrendingUp, IconChartBar, IconFlame, IconLeaf, IconTarget, IconCalendarCheck, IconDownload } from '@tabler/icons-react'
 import './WeeklyReport.css'
 
 function fmtSeconds(s) {
@@ -24,11 +24,38 @@ function barColor(hours) {
 export default function WeeklyReport({ api, refreshKey }) {
   const [weekly, setWeekly] = useState([])
   const [topApps, setTopApps] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [exportMsg, setExportMsg] = useState('')
 
   useEffect(() => {
-    api.getWeeklyUsage().then(setWeekly).catch(() => {})
-    api.getTodayUsage().then(setTopApps).catch(() => {})
+    setLoading(true)
+    Promise.all([
+      api.getWeeklyUsage(),
+      api.getTodayUsage()
+    ]).then(([w, t]) => {
+      setWeekly(w)
+      setTopApps(t)
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [refreshKey])
+
+  async function handleExport() {
+    if (!api.exportCsv) return
+    setExporting(true)
+    setExportMsg('')
+    try {
+      const result = await api.exportCsv()
+      if (result.cancelled) {
+        setExportMsg('')
+      } else if (result.ok) {
+        setExportMsg('Exported!')
+        setTimeout(() => setExportMsg(''), 3000)
+      }
+    } catch {
+      setExportMsg('Export failed')
+    }
+    setExporting(false)
+  }
 
   const totalSecs = weekly.reduce((a, d) => a + d.total_seconds, 0)
   const avgSecs = weekly.length ? Math.round(totalSecs / weekly.filter(d => d.total_seconds > 0).length || 1) : 0
@@ -37,11 +64,21 @@ export default function WeeklyReport({ api, refreshKey }) {
   const maxSecs = Math.max(...weekly.map(d => d.total_seconds), 1)
   const today = new Date().toISOString().slice(0, 10)
 
+  if (loading) return <div className="empty-state">Loading report...</div>
+
   return (
     <div className="weekly-report">
       {/* Bar chart */}
       <div className="card week-chart-card">
-        <div className="card-title">Screen time — last 7 days</div>
+        <div className="card-title-row">
+          <div className="card-title">Screen time — last 7 days</div>
+          {api.exportCsv && (
+            <button className="btn-export" onClick={handleExport} disabled={exporting}>
+              <IconDownload size={14} />
+              {exporting ? 'Saving...' : exportMsg || 'Export CSV'}
+            </button>
+          )}
+        </div>
         <div className="week-bars">
           {weekly.map(d => {
             const h = d.total_seconds / 3600

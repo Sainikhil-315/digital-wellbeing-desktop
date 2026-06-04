@@ -71,6 +71,17 @@
   margin-top: 2px;
   font-style: italic;
 }
+.form-select-sm {
+  width: auto;
+  min-width: 140px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
 .time-inputs { display: flex; align-items: center; gap: 6px; }
 .time-in { width: 56px; text-align: center; }
 .time-sep { font-size: 12px; color: var(--text-muted); }
@@ -147,4 +158,54 @@
   justify-content: space-between;
   font-size: 11px;
   color: var(--text-secondary);
+}
+
+/* Inline edit row */
+.limit-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+.edit-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.btn-cancel-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.btn-save-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Edit pencil button */
+.edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+}
+.edit-btn:hover { color: var(--blue); background: rgba(75,143,226,.1); }
+
+/* Exceeded card highlight */
+.limit-exceeded {
+  border-color: var(--red-dim);
 }
