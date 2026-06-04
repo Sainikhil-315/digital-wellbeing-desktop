@@ -231,6 +231,26 @@ export default function Settings({ api }) {
             <span className="settings-version mono">v2.1.0</span>
           </div>
         </div>
+        <div className="settings-row">
+          <div className="settings-label">
+            <div className="settings-label-title">Made with passion by Nikh</div>
+            <div className="settings-label-desc">Built for focus, shipped with love</div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <div className="settings-label">
+            <div className="settings-label-title">Buy me a coffee</div>
+            <div className="settings-label-desc">If this app helps you, consider supporting development</div>
+          </div>
+          <div className="settings-control">
+            <button
+              className="settings-btn bmc-btn"
+              onClick={() => api.openExternal('https://buymeacoffee.com/nikh315')}
+            >
+              ☕ Buy me a coffee
+            </button>
+          </div>
+        </div>
       </section>
 
     </div>

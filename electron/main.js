@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { exec } = require('child_process')
@@ -363,4 +363,6 @@ function setupIPC(db, startTrackerInterval) {
     }
     return true
   })
+
+  ipcMain.handle('open-external', (_, url) => shell.openExternal(url))
 }

@@ -99,6 +99,14 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+.settings-btn.bmc-btn {
+  background: #FFDD00;
+  color: #000;
+  font-weight: 600;
+}
+.settings-btn.bmc-btn:hover {
+  background: #f0cf00;
+}
 
 .settings-version {
   font-size: 12px;
