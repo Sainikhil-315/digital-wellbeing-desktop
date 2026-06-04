@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Component } from 'react'
 import {
   IconLayoutDashboard,
   IconClockPause,
   IconFocus2,
   IconCalendarStats,
+  IconSettings,
   IconMinus,
   IconCopy,
   IconX
@@ -13,20 +14,41 @@ import Dashboard from './components/Dashboard.jsx'
 import AppLimits from './components/AppLimits.jsx'
 import FocusMode from './components/FocusMode.jsx'
 import WeeklyReport from './components/WeeklyReport.jsx'
+import Settings from './components/Settings.jsx'
 import UpdateBanner from './components/UpdateBanner.jsx'
 
 const api = window.electronAPI || {
   getTodayUsage: async () => [],
   getWeeklyUsage: async () => [],
+  getHourlyUsage: async () => new Array(24).fill(0),
   getLimits: async () => [],
   setLimit: async () => {},
   removeLimit: async () => {},
   getSessions: async () => [],
   saveSession: async () => {},
   getStats: async () => ({ today_seconds: 0, weekly_avg_seconds: 0, focus_today_seconds: 0, limit_alerts: 0 }),
+  getSettings: async () => ({}),
+  saveSetting: async () => {},
+  exportCsv: async () => ({ ok: false }),
   windowMinimize: () => {},
   windowMaximize: () => {},
   windowClose: () => {},
+}
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="error-boundary">
+          <div className="error-boundary-msg">Something went wrong in this view.</div>
+          <button className="btn-retry" onClick={() => this.setState({ error: null })}>Retry</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
 
 const NAV = [
@@ -34,6 +56,7 @@ const NAV = [
   { id: 'limits',    label: 'App Limits',    icon: IconClockPause },
   { id: 'focus',     label: 'Focus Mode',    icon: IconFocus2 },
   { id: 'weekly',    label: 'Weekly Report', icon: IconCalendarStats },
+  { id: 'settings',  label: 'Settings',      icon: IconSettings },
 ]
 
 export default function App() {
@@ -133,10 +156,13 @@ export default function App() {
           </div>
 
           <div className="content-body">
-            {tab === 'dashboard' && <Dashboard api={api} refreshKey={refreshKey} />}
-            {tab === 'limits'    && <AppLimits api={api} refreshKey={refreshKey} onRefresh={refresh} />}
-            {tab === 'focus'     && <FocusMode api={api} refreshKey={refreshKey} onRefresh={refresh} />}
-            {tab === 'weekly'    && <WeeklyReport api={api} refreshKey={refreshKey} />}
+            <ErrorBoundary key={tab}>
+              {tab === 'dashboard' && <Dashboard api={api} refreshKey={refreshKey} />}
+              {tab === 'limits'    && <AppLimits api={api} refreshKey={refreshKey} onRefresh={refresh} />}
+              {tab === 'focus'     && <FocusMode api={api} refreshKey={refreshKey} onRefresh={refresh} />}
+              {tab === 'weekly'    && <WeeklyReport api={api} refreshKey={refreshKey} />}
+              {tab === 'settings'  && <Settings api={api} />}
+            </ErrorBoundary>
           </div>
         </main>
       </div>

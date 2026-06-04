@@ -55,7 +55,8 @@ async function init() {
       is_productive INTEGER DEFAULT 0,
       notified_warn INTEGER DEFAULT 0,
       notified_exceeded INTEGER DEFAULT 0,
-      last_notified_date TEXT DEFAULT ''
+      last_notified_date TEXT DEFAULT '',
+      category TEXT DEFAULT 'Other'
     );
 
     CREATE TABLE IF NOT EXISTS focus_sessions (
@@ -67,15 +68,23 @@ async function init() {
       completed INTEGER DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_date ON usage_log(date);
     CREATE INDEX IF NOT EXISTS idx_usage_app ON usage_log(app_name);
     CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage_log(timestamp);
   `)
 
-  // Add last_notified_date column to existing DBs that don't have it
+  // Migrations for existing DBs
   try {
     db.run(`ALTER TABLE app_limits ADD COLUMN last_notified_date TEXT DEFAULT ''`)
-  } catch (e) { /* column already exists, ignore */ }
+  } catch (e) { /* already exists */ }
+  try {
+    db.run(`ALTER TABLE app_limits ADD COLUMN category TEXT DEFAULT 'Other'`)
+  } catch (e) { /* already exists */ }
 
   setInterval(persist, 30000)
   // Reset notification flags at midnight daily
@@ -207,14 +216,15 @@ function getLimitsWithUsage() {
   })
 }
 
-function setLimit(app_name, limit_seconds, is_productive = 0) {
+function setLimit(app_name, limit_seconds, is_productive = 0, category = 'Other') {
   run(`
-    INSERT INTO app_limits (app_name, limit_seconds, is_productive, last_notified_date)
-    VALUES (?, ?, ?, '')
+    INSERT INTO app_limits (app_name, limit_seconds, is_productive, last_notified_date, category)
+    VALUES (?, ?, ?, '', ?)
     ON CONFLICT(app_name) DO UPDATE SET
       limit_seconds = excluded.limit_seconds,
-      is_productive = excluded.is_productive
-  `, [app_name, limit_seconds, is_productive ? 1 : 0])
+      is_productive = excluded.is_productive,
+      category = excluded.category
+  `, [app_name, limit_seconds, is_productive ? 1 : 0, category])
   return { ok: true }
 }
 
@@ -282,8 +292,59 @@ function getStats() {
   }
 }
 
+function getSetting(key, defaultVal = null) {
+  const rows = query('SELECT value FROM settings WHERE key = ?', [key])
+  return rows.length ? rows[0].value : defaultVal
+}
+
+function saveSetting(key, value) {
+  run(
+    `INSERT INTO settings (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    [key, String(value)]
+  )
+  return { ok: true }
+}
+
+function getAllSettings() {
+  const defaults = {
+    poll_interval: '5000',
+    startup_launch: 'true',
+    notify_enabled: 'true',
+    notify_warn_pct: '0.8',
+    data_retention_days: '90',
+    kill_on_exceeded: 'true'
+  }
+  const rows = query('SELECT key, value FROM settings')
+  const stored = {}
+  for (const row of rows) stored[row.key] = row.value
+  return { ...defaults, ...stored }
+}
+
+function exportUsageData(days = 30) {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  const cutoffDate = cutoff.toISOString().slice(0, 10)
+  return query(`
+    SELECT app_name, date, SUM(duration_seconds) as total_seconds
+    FROM usage_log
+    WHERE date >= ?
+    GROUP BY app_name, date
+    ORDER BY date DESC, total_seconds DESC
+  `, [cutoffDate])
+}
+
+function deleteOldData(retentionDays) {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - Number(retentionDays))
+  const cutoffDate = cutoff.toISOString().slice(0, 10)
+  run('DELETE FROM usage_log WHERE date < ?', [cutoffDate])
+  return { ok: true }
+}
+
 module.exports = {
   init, recordUsage, getTodayUsage, getHourlyUsage, getWeeklyUsage,
   getLimits, getLimitsWithUsage, setLimit, removeLimit, markNotified,
-  getSessions, saveSession, getStats
+  getSessions, saveSession, getStats,
+  getSetting, saveSetting, getAllSettings, exportUsageData, deleteOldData
 }

@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, Notification, Tray, Menu } = require('electron')
+const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, dialog } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const { exec } = require('child_process')
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -9,6 +10,7 @@ let trackerInterval = null
 let focusModeActive = false
 let whitelistedApps = []
 let focusModeInterval = null
+
 
 function setupAutoUpdater() {
   if (isDev) return
@@ -76,10 +78,12 @@ app.whenReady().then(async () => {
   await db.init()
   const tracker = require('./tracker')
 
-  // Auto-launch on Windows login
+  const settings = db.getAllSettings()
+
+  // Auto-launch on Windows login (respects user setting)
   if (process.platform === 'win32') {
     app.setLoginItemSettings({
-      openAtLogin: true,
+      openAtLogin: settings.startup_launch === 'true',
       openAsHidden: true
     })
   }
@@ -104,17 +108,27 @@ app.whenReady().then(async () => {
 
   setupAutoUpdater()
 
-  trackerInterval = setInterval(() => {
-    tracker.pollActiveWindow((appName) => {
-      if (appName) {
-        console.log(`[Tracker] Recording: ${appName}`)
-        db.recordUsage(appName)
-        checkLimitAlerts(appName, db)
-      }
-    })
-  }, 5000)
+  function startTrackerInterval(intervalMs) {
+    if (trackerInterval) clearInterval(trackerInterval)
+    trackerInterval = setInterval(() => {
+      tracker.pollActiveWindow((appName) => {
+        if (appName) {
+          db.recordUsage(appName)
+          const currentSettings = db.getAllSettings()
+          if (currentSettings.notify_enabled !== 'false') {
+            checkLimitAlerts(appName, db, parseFloat(currentSettings.notify_warn_pct || '0.8'))
+          }
+        }
+      })
+    }, intervalMs)
+  }
 
-  setupIPC(db)
+  startTrackerInterval(parseInt(settings.poll_interval || '5000'))
+
+  // Clean up old data on startup based on retention setting
+  db.deleteOldData(parseInt(settings.data_retention_days || '90'))
+
+  setupIPC(db, startTrackerInterval)
 })
 
 app.on('window-all-closed', () => {
@@ -129,100 +143,117 @@ app.on('activate', () => {
   showWindow()
 })
 
-function checkLimitAlerts(appName, db) {
-  const limits = db.getLimitsWithUsage()  // use the one that already has used_seconds
+function checkLimitAlerts(appName, db, warnPct = 0.8) {
+  const limits = db.getLimitsWithUsage()
   const limit = limits.find(l => l.app_name.toLowerCase() === appName.toLowerCase())
   if (!limit) return
 
   const pct = limit.used_seconds / limit.limit_seconds
-  // Explicit integer comparison — sql.js returns 0/1 not booleans
   if (pct >= 1.0 && limit.notified_exceeded !== 1) {
     db.markNotified(appName, 'exceeded')
-    new Notification({
-      title: 'Limit Exceeded',
-      body: `${appName} has exceeded your daily limit of ${Math.round(limit.limit_seconds / 60)}m`
-    }).show()
-  } else if (pct >= 0.8 && limit.notified_warn !== 1) {
+
+    const limitMins = Math.round(limit.limit_seconds / 60)
+    const shouldKill = db.getSetting('kill_on_exceeded', 'true') === 'true'
+    const tracker = require('./tracker')
+    const processName = tracker.getProcessNameFor(appName)
+
+    if (shouldKill && processName) {
+      // Kill first, then show blocking dialog
+      killProcess(processName)
+      dialog.showMessageBox({
+        type: 'warning',
+        title: 'Daily Limit Reached',
+        message: `Time's up for ${appName} today.`,
+        detail: `You've used your full ${limitMins}m daily limit for ${appName}.\n\nCome back tomorrow — your session resets at midnight. Want more time? You can always update your limits in Digital Wellbeing.`,
+        buttons: ['Got it', 'Edit Limits'],
+        defaultId: 0,
+        cancelId: 0,
+      }).then(({ response }) => {
+        if (response === 1) showWindow()
+      })
+    } else {
+      // Soft mode — notify only, app keeps running
+      new Notification({
+        title: `${appName} — Daily Limit Reached`,
+        body: `You've used your full ${limitMins}m for today. The app is still open — disable "close on exceeded" in Settings.`
+      }).show()
+    }
+  } else if (pct >= warnPct && limit.notified_warn !== 1) {
     db.markNotified(appName, 'warn')
     new Notification({
-      title: 'Approaching Limit',
-      body: `${appName} is at ${Math.round(pct * 100)}% of your daily limit`
+      title: `${appName} — ${Math.round(pct * 100)}% of daily limit used`,
+      body: `You have ${Math.round((limit.limit_seconds - limit.used_seconds) / 60)}m left for today.`
     }).show()
   }
 }
 
-function killNonWhitelistedApps() {
-  const appProcessMap = {
-    'Google Chrome': 'chrome',
-    'Microsoft Edge': 'msedge',
-    'Firefox': 'firefox',
-    'VS Code': 'code',
-    'File Explorer': 'explorer',
-    'Slack': 'slack',
-    'Discord': 'discord',
-    'Spotify': 'spotify',
-    'VLC': 'vlc',
-    'Microsoft Teams': 'teams',
-    'Zoom': 'zoom',
-    'Electron': 'electron'
-  }
+function killProcess(processName) {
+  const killCmd = `Stop-Process -Name ${processName} -Force -ErrorAction SilentlyContinue`
+  exec(`powershell -Command "${killCmd.replace(/"/g, '\\"')}"`, () => {})
+}
 
-  Object.entries(appProcessMap).forEach(([appName, processName]) => {
-    // Don't kill whitelisted apps or File Explorer (essential for Windows)
-    if (whitelistedApps.includes(appName) || appName === 'File Explorer') {
-      return
-    }
-    
-    // Kill the process immediately
-    const killCmd = `Stop-Process -Name ${processName} -Force -ErrorAction SilentlyContinue`
-    exec(`powershell -Command "${killCmd.replace(/"/g, '\\"')}"`, () => {
-      console.log(`[Focus] Killed: ${appName}`)
-    })
+function killNonWhitelistedApps() {
+  const tracker = require('./tracker')
+  const allApps = tracker.getAllKnownApps() // { processName: displayName }
+  Object.entries(allApps).forEach(([processName, displayName]) => {
+    if (whitelistedApps.includes(displayName) || displayName === 'File Explorer') return
+    killProcess(processName)
   })
 }
 
 function monitorForBlockedApps() {
   if (!focusModeActive) return
-  
-  const appProcessMap = {
-    'Google Chrome': 'chrome',
-    'Microsoft Edge': 'msedge',
-    'Firefox': 'firefox',
-    'VS Code': 'code',
-    'Slack': 'slack',
-    'Discord': 'discord',
-    'Spotify': 'spotify',
-    'VLC': 'vlc',
-    'Microsoft Teams': 'teams',
-    'Zoom': 'zoom',
-    'Electron': 'electron'
-  }
-
-  Object.entries(appProcessMap).forEach(([appName, processName]) => {
-    // Skip whitelisted apps
-    if (whitelistedApps.includes(appName)) {
-      return
-    }
-    
-    // Aggressively kill any instance of blocked app every time monitor runs
-    const killCmd = `Stop-Process -Name ${processName} -Force -ErrorAction SilentlyContinue`
-    exec(`powershell -Command "${killCmd.replace(/"/g, '\\"')}"`, () => {
-      // Silently kill - only log if needed for debugging
-    })
+  const tracker = require('./tracker')
+  const allApps = tracker.getAllKnownApps()
+  Object.entries(allApps).forEach(([processName, displayName]) => {
+    if (whitelistedApps.includes(displayName) || displayName === 'File Explorer') return
+    killProcess(processName)
   })
 }
 
-function setupIPC(db) {
+function setupIPC(db, startTrackerInterval) {
   ipcMain.handle('get-today-usage',  () => db.getTodayUsage())
   ipcMain.handle('get-weekly-usage', () => db.getWeeklyUsage())
   ipcMain.handle('get-hourly-usage', () => db.getHourlyUsage())
   ipcMain.handle('get-limits',       () => db.getLimitsWithUsage())
-  ipcMain.handle('set-limit',   (_, { app_name, limit_seconds, is_productive }) =>
-    db.setLimit(app_name, limit_seconds, is_productive))
+  ipcMain.handle('set-limit',   (_, { app_name, limit_seconds, is_productive, category }) =>
+    db.setLimit(app_name, limit_seconds, is_productive, category))
   ipcMain.handle('remove-limit', (_, { app_name }) => db.removeLimit(app_name))
   ipcMain.handle('get-sessions', () => db.getSessions())
   ipcMain.handle('save-session', (_, session) => db.saveSession(session))
   ipcMain.handle('get-stats',    () => db.getStats())
+
+  // Settings
+  ipcMain.handle('get-settings', () => db.getAllSettings())
+  ipcMain.handle('save-setting', (_, { key, value }) => {
+    db.saveSetting(key, value)
+    if (key === 'poll_interval') {
+      startTrackerInterval(parseInt(value) || 5000)
+    }
+    if (key === 'startup_launch' && process.platform === 'win32') {
+      app.setLoginItemSettings({ openAtLogin: value === 'true', openAsHidden: true })
+    }
+    if (key === 'data_retention_days') {
+      db.deleteOldData(parseInt(value) || 90)
+    }
+    return { ok: true }
+  })
+
+  // CSV Export
+  ipcMain.handle('export-csv', async () => {
+    const { filePath } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: `digital-wellbeing-${new Date().toISOString().slice(0, 10)}.csv`,
+      filters: [{ name: 'CSV Files', extensions: ['csv'] }]
+    })
+    if (!filePath) return { ok: false, cancelled: true }
+    const rows = db.exportUsageData(30)
+    const header = 'App Name,Date,Total Minutes\n'
+    const csv = header + rows.map(r =>
+      `"${r.app_name}",${r.date},${Math.round(Number(r.total_seconds) / 60)}`
+    ).join('\n')
+    fs.writeFileSync(filePath, csv, 'utf8')
+    return { ok: true, path: filePath }
+  })
 
   ipcMain.handle('window-minimize', () => mainWindow?.minimize())
   ipcMain.handle('window-maximize', () => {
@@ -240,9 +271,6 @@ function setupIPC(db) {
   ipcMain.handle('start-focus-mode', (_, { apps }) => {
     focusModeActive = true
     whitelistedApps = apps
-    console.log(`[Focus] Mode started with apps: ${apps.join(', ')}`)
-    
-    // Kill non-whitelisted apps
     killNonWhitelistedApps()
     
     // Monitor for blocked app attempts every 1 second (aggressive blocking)
@@ -259,7 +287,6 @@ function setupIPC(db) {
       clearInterval(focusModeInterval)
       focusModeInterval = null
     }
-    console.log('[Focus] Mode stopped - all apps re-enabled')
     return true
   })
 }

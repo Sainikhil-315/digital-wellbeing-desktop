@@ -6,6 +6,32 @@
 
 .week-chart-card {}
 
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.card-title-row .card-title {
+  margin-bottom: 0;
+}
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-export:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); }
+.btn-export:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .week-bars {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
