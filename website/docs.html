@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentation — Digital Wellbeing</title>
+  <meta name="description" content="Complete documentation for Digital Wellbeing — installation, features, settings, and troubleshooting." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:             #04040f;
+      --glass-bg:       rgba(255,255,255,0.04);
+      --glass-border:   rgba(255,255,255,0.10);
+      --text:           #ffffff;
+      --text-muted:     rgba(255,255,255,0.55);
+      --text-dim:       rgba(255,255,255,0.30);
+      --accent-purple:  #8b5cf6;
+      --accent-cyan:    #06b6d4;
+      --accent-green:   #34d399;
+      --accent-orange:  #fb923c;
+      --grad:           linear-gradient(135deg, #8b5cf6, #06b6d4);
+      --grad-text:      linear-gradient(135deg, #a78bfa, #38bdf8, #f0abfc);
+      --sidebar-width:  260px;
+      --nav-height:     68px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NOISE GRAIN ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.022;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+    }
+
+    /* ── BACKGROUND BLOBS ── */
+    .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(130px); opacity: 0.18; }
+    .blob-1 { width: 600px; height: 600px; background: radial-gradient(circle, rgba(139,92,246,0.5), transparent 70%); top: -100px; left: -150px; }
+    .blob-2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(6,182,212,0.4), transparent 70%); top: 200px; right: -100px; }
+    .blob-3 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(236,72,153,0.3), transparent 70%); bottom: 100px; left: 30%; }
+
+    /* ── GLASS ── */
+    .glass {
+      background: linear-gradient(145deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.065) 100%);
+      backdrop-filter: blur(60px) saturate(160%) brightness(1.1);
+      -webkit-backdrop-filter: blur(60px) saturate(160%) brightness(1.1);
+      border: 1px solid rgba(255,255,255,0.13);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.2);
+    }
+
+    /* ── NAVBAR ── */
+    nav {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 200; width: calc(100% - 48px); max-width: 1100px;
+      border-radius: 18px; padding: 13px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 15px; text-decoration: none; color: var(--text);
+    }
+    .logo-dot {
+      width: 26px; height: 26px; border-radius: 8px; background: var(--grad);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-links { display: flex; align-items: center; gap: 6px; list-style: none; }
+    .nav-links a {
+      color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500;
+      padding: 6px 13px; border-radius: 10px; transition: color 0.2s, background 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+    .nav-links a.active { color: var(--text); background: rgba(139,92,246,0.15); }
+    .nav-cta {
+      background: var(--grad); color: white !important; border-radius: 11px;
+      padding: 7px 17px !important; font-weight: 600 !important;
+    }
+    .nav-cta:hover { opacity: 0.88; background: rgba(0,0,0,0) !important; }
+
+    /* ── DOCS LAYOUT ── */
+    .docs-wrap {
+      display: flex;
+      padding-top: calc(var(--nav-height) + 20px);
+      min-height: 100vh;
+      position: relative; z-index: 1;
+    }
+
+    /* ── SIDEBAR ── */
+    .docs-sidebar {
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: calc(var(--nav-height) + 28px);
+      height: calc(100vh - var(--nav-height) - 28px);
+      overflow-y: auto;
+      padding: 24px 0 40px 24px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.08) transparent;
+    }
+    .docs-sidebar::-webkit-scrollbar { width: 3px; }
+    .docs-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+    .sidebar-group { margin-bottom: 28px; }
+    .sidebar-group-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-dim); padding: 0 12px; margin-bottom: 6px;
+    }
+    .sidebar-link {
+      display: block; padding: 6px 12px; border-radius: 8px;
+      color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 450;
+      transition: color 0.15s, background 0.15s; border-left: 2px solid transparent; margin-right: 8px;
+    }
+    .sidebar-link:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .sidebar-link.active {
+      color: #a78bfa; background: rgba(139,92,246,0.1);
+      border-left-color: #8b5cf6; font-weight: 500;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .docs-content {
+      flex: 1;
+      padding: 24px 48px 80px 40px;
+      max-width: 820px;
+    }
+
+    /* ── SECTION ── */
+    .doc-section {
+      margin-bottom: 72px;
+      scroll-margin-top: calc(var(--nav-height) + 32px);
+    }
+
+    .section-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600;
+      background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);
+      color: #a78bfa; margin-bottom: 14px;
+    }
+
+    h1 { font-size: 36px; font-weight: 800; letter-spacing: -1.2px; line-height: 1.1; margin-bottom: 14px; }
+    h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.6px; margin-bottom: 12px; }
+    h3 { font-size: 18px; font-weight: 650; letter-spacing: -0.3px; margin-bottom: 10px; margin-top: 28px; }
+    h4 { font-size: 14px; font-weight: 650; margin-bottom: 8px; margin-top: 20px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    p {
+      font-size: 15px; color: var(--text-muted); line-height: 1.75;
+      margin-bottom: 14px;
+    }
+    p:last-child { margin-bottom: 0; }
+
+    a { color: #a78bfa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── DIVIDER ── */
+    .doc-divider {
+      height: 1px; background: rgba(255,255,255,0.07); margin: 48px 0;
+    }
+
+    /* ── CALLOUT ── */
+    .callout {
+      border-radius: 12px; padding: 16px 20px; margin: 20px 0;
+      font-size: 14px; line-height: 1.65;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body { color: var(--text-muted); }
+    .callout-body strong { color: var(--text); }
+    .callout.info { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); }
+    .callout.tip  { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); }
+    .callout.warn { background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.2); }
+    .callout.danger { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
+
+    /* ── CODE ── */
+    code {
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px; padding: 2px 6px; color: #e2d9f3;
+    }
+    pre {
+      background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 18px 20px; overflow-x: auto; margin: 16px 0;
+    }
+    pre code {
+      background: none; border: none; padding: 0; font-size: 13px;
+      color: #c4b5fd; line-height: 1.7;
+    }
+
+    /* ── STEPS ── */
+    .steps { display: flex; flex-direction: column; gap: 0; margin: 20px 0; }
+    .step {
+      display: flex; gap: 18px; padding-bottom: 28px; position: relative;
+    }
+    .step:last-child { padding-bottom: 0; }
+    .step::before {
+      content: ''; position: absolute; left: 16px; top: 36px; bottom: 0;
+      width: 1px; background: rgba(255,255,255,0.08);
+    }
+    .step:last-child::before { display: none; }
+    .step-num {
+      width: 33px; height: 33px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #a78bfa;
+    }
+    .step-body { padding-top: 5px; flex: 1; }
+    .step-title { font-size: 15px; font-weight: 650; color: var(--text); margin-bottom: 6px; }
+    .step-desc { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+
+    /* ── FEATURE GRID ── */
+    .feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+    .feat-card {
+      border-radius: 14px; padding: 18px 20px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    }
+    .feat-card-icon { font-size: 20px; margin-bottom: 10px; }
+    .feat-card-title { font-size: 14px; font-weight: 650; color: var(--text); margin-bottom: 6px; }
+    .feat-card-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── TABLE ── */
+    .doc-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    .doc-table th {
+      text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .doc-table td {
+      padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: var(--text-muted); vertical-align: top;
+    }
+    .doc-table td:first-child { color: var(--text); font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .doc-table tr:last-child td { border-bottom: none; }
+    .doc-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .badge-cyan   { background: rgba(6,182,212,0.15);  color: #38bdf8; }
+    .badge-green  { background: rgba(52,211,153,0.15); color: #34d399; }
+    .badge-orange { background: rgba(251,146,60,0.15); color: #fb923c; }
+    .badge-red    { background: rgba(239,68,68,0.15);  color: #f87171; }
+
+    /* ── SCENARIO BLOCK ── */
+    .scenario {
+      border-radius: 14px; padding: 20px 22px; margin: 20px 0;
+      background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.18);
+    }
+    .scenario-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #8b5cf6; margin-bottom: 8px;
+    }
+    .scenario-title { font-size: 15px; font-weight: 650; color: var(--text); margin-bottom: 8px; }
+    .scenario-body { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+
+    /* ── FAQ ACCORDION ── */
+    .faq-list { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+    .faq-item { border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
+    .faq-item summary {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 18px; cursor: pointer; user-select: none;
+      font-size: 15px; font-weight: 600; color: var(--text);
+      list-style: none; transition: background 0.15s;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary:hover { background: rgba(255,255,255,0.04); }
+    .faq-num {
+      min-width: 24px; height: 24px; border-radius: 6px;
+      background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #a78bfa; flex-shrink: 0;
+    }
+    .faq-chevron {
+      margin-left: auto; color: var(--text-dim); transition: transform 0.2s; flex-shrink: 0;
+      font-size: 12px;
+    }
+    .faq-item[open] summary { background: rgba(139,92,246,0.06); }
+    .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+    .faq-body {
+      padding: 0 18px 16px 54px;
+      font-size: 14px; color: var(--text-muted); line-height: 1.72;
+    }
+    .faq-body p { margin: 0; }
+    .faq-body code {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px; padding: 1px 5px; color: #e2d9f3;
+    }
+
+    /* ── TOC PROGRESS LINE ── */
+    #toc-progress {
+      position: fixed; left: 0; top: 0; width: 2px; z-index: 999;
+      background: linear-gradient(180deg, #8b5cf6, #06b6d4);
+      transition: height 0.1s linear;
+    }
+
+    /* ── FOOTER ── */
+    .docs-footer {
+      border-top: 1px solid rgba(255,255,255,0.06); padding: 32px 24px;
+      text-align: center; font-size: 13px; color: var(--text-dim);
+      position: relative; z-index: 1;
+    }
+    .docs-footer a { color: #a78bfa; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      .docs-sidebar { display: none; }
+      .docs-content { padding: 16px 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toc-progress"></div>
+
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- ── NAVBAR ── -->
+<nav class="glass">
+  <a href="index.html" class="nav-logo">
+    <div class="logo-dot">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    Digital Wellbeing
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="index.html#how">How it works</a></li>
+    <li><a href="docs.html" class="active">Docs</a></li>
+    <li><a href="https://github.com/Sainikhil-315/digital-wellbeing-desktop" target="_blank" rel="noopener">GitHub</a></li>
+    <li><a href="index.html#download" class="nav-cta">Download</a></li>
+  </ul>
+</nav>
+
+<!-- ── DOCS LAYOUT ── -->
+<div class="docs-wrap">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="docs-sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Getting Started</div>
+      <a href="#introduction"  class="sidebar-link">Introduction</a>
+      <a href="#installation"  class="sidebar-link">Installation</a>
+      <a href="#first-launch"  class="sidebar-link">First Launch</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Features</div>
+      <a href="#dashboard"     class="sidebar-link">Dashboard</a>
+      <a href="#app-limits"    class="sidebar-link">App Limits</a>
+      <a href="#app-usage"     class="sidebar-link">App Usage</a>
+      <a href="#weekly-report" class="sidebar-link">Weekly Report</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Configuration</div>
+      <a href="#settings"      class="sidebar-link">Settings</a>
+      <a href="#categories"    class="sidebar-link">Categories</a>
+      <a href="#notifications" class="sidebar-link">Notifications</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Reference</div>
+      <a href="#privacy"       class="sidebar-link">Privacy & Data</a>
+      <a href="#faq"           class="sidebar-link">FAQ</a>
+      <a href="#troubleshoot"  class="sidebar-link">Troubleshooting</a>
+    </div>
+  </aside>
+
+  <!-- ── CONTENT ── -->
+  <main class="docs-content">
+
+    <!-- ════ INTRODUCTION ════ -->
+    <div class="doc-section" id="introduction">
+      <div class="section-eyebrow">✦ Overview</div>
+      <h1>Digital Wellbeing Docs</h1>
+      <p>Digital Wellbeing is a free, open-source Windows desktop app that tracks your screen time, lets you enforce app limits, and gives you a clear picture of your habits — all without sending a single byte to the cloud.</p>
+      <p>This documentation covers every feature in depth, with real-world scenarios so you know exactly when and how to use each setting.</p>
+
+      <div class="feat-grid">
+        <div class="feat-card">
+          <div class="feat-card-icon">📊</div>
+          <div class="feat-card-title">Screen Time Tracking</div>
+          <div class="feat-card-desc">Polls active window every 5 seconds. Stores data locally in SQLite — no cloud, ever.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-card-icon">⏱️</div>
+          <div class="feat-card-title">App Limits</div>
+          <div class="feat-card-desc">Daily time caps per app with soft (notify) or hard (close) enforcement and grace periods.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-card-icon">🗂️</div>
+          <div class="feat-card-title">App Usage & Categories</div>
+          <div class="feat-card-desc">Full sortable table of every app used today with user-overridable categories that persist permanently.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-card-icon">📅</div>
+          <div class="feat-card-title">Weekly Reports</div>
+          <div class="feat-card-desc">7-day breakdown, streak calendar, category heatmap, and trend arrows vs last week.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ INSTALLATION ════ -->
+    <div class="doc-section" id="installation">
+      <h2>Installation</h2>
+      <p>Digital Wellbeing ships as a standard Windows NSIS installer. No admin rights required for most features.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Download the installer</div>
+            <div class="step-desc">Go to the <a href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/releases/latest" target="_blank">GitHub Releases page</a> and download <code>Digital-Wellbeing-Setup-x.x.x.exe</code>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Run the installer</div>
+            <div class="step-desc">Double-click the .exe. Windows SmartScreen may show a warning — click <strong>More info → Run anyway</strong>. The app is open source; you can audit the code on GitHub.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">App launches automatically</div>
+            <div class="step-desc">After install, Digital Wellbeing opens and immediately starts tracking. A tray icon appears in the system tray (bottom-right taskbar area).</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Enable startup launch (optional)</div>
+            <div class="step-desc">In Settings → Tracking, turn on <strong>Launch at startup</strong> so tracking begins automatically every time Windows boots — without you opening the app manually.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body"><strong>Data location:</strong> All usage data is stored at <code>%APPDATA%\digital-wellbeing\wellbeing.db</code> — a plain SQLite file you can inspect, export, or delete at any time.</div>
+      </div>
+
+      <h3>System requirements</h3>
+      <table class="doc-table">
+        <tr><th>Requirement</th><th>Details</th></tr>
+        <tr><td>OS</td><td>Windows 10 or Windows 11 (x64)</td></tr>
+        <tr><td>RAM</td><td>~50 MB at idle, ~80 MB during active use</td></tr>
+        <tr><td>Disk</td><td>&lt; 150 MB installed; DB grows ~1 MB/month</td></tr>
+        <tr><td>Network</td><td>Only for update checks (every 4 hours). No telemetry.</td></tr>
+      </table>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ FIRST LAUNCH ════ -->
+    <div class="doc-section" id="first-launch">
+      <h2>First Launch</h2>
+      <p>On first launch, the app opens to the Dashboard and starts tracking immediately. No setup wizard, no account — it just works.</p>
+
+      <h3>What happens in the background</h3>
+      <p>Every 5 seconds (configurable), the app calls a Windows API (<code>GetForegroundWindow</code>) to find which app is currently active. It logs that to a local SQLite database. After 30 days of use, you'll have a rich picture of exactly how you spend your time.</p>
+
+      <div class="scenario">
+        <div class="scenario-label">📌 Real scenario</div>
+        <div class="scenario-title">You open the app for the first time at 9 AM</div>
+        <div class="scenario-body">By 10 AM, you'll see VS Code logged 35 minutes, Chrome 18 minutes, Slack 7 minutes. The dashboard updates in real time — no refresh needed. Close the window; the tray icon keeps tracking silently.</div>
+      </div>
+
+      <h3>System tray behavior</h3>
+      <p>Closing the window does <strong>not</strong> quit the app — it minimizes to the system tray. This is intentional: tracking continues without keeping a window on screen. To fully exit, right-click the tray icon → Quit.</p>
+      <p>Double-click the tray icon to reopen the dashboard at any time.</p>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ DASHBOARD ════ -->
+    <div class="doc-section" id="dashboard">
+      <h2>Dashboard</h2>
+      <p>The Dashboard is the home screen. It shows a real-time view of today's usage plus analytics from your full history.</p>
+
+      <h3>Metrics row</h3>
+      <table class="doc-table">
+        <tr><th>Card</th><th>What it means</th></tr>
+        <tr><td>Today</td><td>Total tracked screen time today, plus a ±delta vs the same day last week.</td></tr>
+        <tr><td>Weekly avg</td><td>Average daily screen time this week, with last week's daily average shown below for comparison.</td></tr>
+        <tr><td>Limit alerts</td><td>How many app limits fired today. Shown in red if non-zero — open App Limits to see which ones triggered.</td></tr>
+      </table>
+
+      <h3>Hourly breakdown chart</h3>
+      <p>A 24-bar chart showing how much time you used apps in each hour of today. Useful for spotting patterns like "I'm always distracted between 2–4 PM."</p>
+
+      <h3>Top apps</h3>
+      <p>The top 5 apps by usage today, with a proportional bar showing each app's share of your total screen time.</p>
+
+      <h3>App trends</h3>
+      <p>Each tracked app shows an arrow <span style="color:#34d399">↑</span> or <span style="color:#f87171">↓</span> with a percentage, comparing today's usage to your 7-day average. Useful for catching drift — "I used Twitter 60% more this week."</p>
+
+      <h3>Usage calendar (365-day heatmap)</h3>
+      <p>A full year of squares, color-coded by usage vs your daily goal:</p>
+      <ul style="color:var(--text-muted); font-size:14px; line-height:2; padding-left:20px;">
+        <li><span style="color:#34d399">■</span> Green — under your daily goal (good)</li>
+        <li><span style="color:#f87171">■</span> Red — over your daily goal</li>
+        <li><span style="color:rgba(255,255,255,0.1)">■</span> Empty — no data (app wasn't running)</li>
+      </ul>
+
+      <div class="scenario">
+        <div class="scenario-label">📌 Real scenario</div>
+        <div class="scenario-title">Setting your daily goal</div>
+        <div class="scenario-body">You set a 5-hour daily goal in Settings. On days you spend 4h 20m on screen, the square turns green. On days you hit 6h, it turns red. Over a month, you can see exactly which days you stayed disciplined and which days you slipped — without having to remember.</div>
+      </div>
+
+      <h3>Longest focus block</h3>
+      <p>The longest uninterrupted stretch of time you spent on a single app today. If you were in VS Code from 9:00 to 10:45 AM without switching, that's a 1h 45m focus block.</p>
+
+      <h3>Week comparison</h3>
+      <p>Compares this week's total screen time to last week's. Shows the delta in hours and whether you're trending up or down.</p>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ APP LIMITS ════ -->
+    <div class="doc-section" id="app-limits">
+      <h2>App Limits</h2>
+      <p>App Limits lets you set a daily time budget for any app. When you hit the limit, the app can notify you (soft) or close itself (hard) — your choice.</p>
+
+      <h3>Setting a limit</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Go to App Limits tab</div>
+            <div class="step-desc">Select an app from the dropdown (shows all apps tracked today and historically) or type a custom app name.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Set time and category</div>
+            <div class="step-desc">Enter hours and minutes for the daily limit. Assign a category (Work / Social / Entertainment / Utility / Other) and mark whether it's a productive app.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Choose enforcement mode</div>
+            <div class="step-desc">Toggle the bell icon on each limit card — 🔔 Hard (closes app) or 🔕 Soft (notify only). You can change this any time.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Soft vs Hard limits</h3>
+      <table class="doc-table">
+        <tr><th>Mode</th><th>What happens at 100%</th><th>Best for</th></tr>
+        <tr><td><span class="badge badge-orange">Soft 🔕</span></td><td>A notification fires. The app stays open. You decide what to do.</td><td>Work tools you legitimately need; apps you want awareness about.</td></tr>
+        <tr><td><span class="badge badge-red">Hard 🔔</span></td><td>App is force-closed via PowerShell. Cannot be bypassed without removing the limit.</td><td>Social media, games, streaming apps — things you want to genuinely stop.</td></tr>
+      </table>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body"><strong>Hard limits save work.</strong> Always set a grace period (5–10 min) when using hard limits on creative or coding apps. This gives you time to save files before the app closes.</div>
+      </div>
+
+      <h3>Warning thresholds</h3>
+      <p>Four warning points fire before the limit is hit:</p>
+      <table class="doc-table">
+        <tr><th>Threshold</th><th>Behavior</th><th>Configurable</th></tr>
+        <tr><td>50%</td><td>Optional early heads-up — "halfway there"</td><td>On/Off in Settings</td></tr>
+        <tr><td>80% (default)</td><td>Primary warning — "getting close"</td><td>Changeable to 50/70/80/90%</td></tr>
+        <tr><td>95%</td><td>Final warning — "5% left"</td><td>On/Off in Settings</td></tr>
+        <tr><td>100%</td><td>Limit reached — enforce soft or hard mode</td><td>Always fires</td></tr>
+      </table>
+
+      <h3>Grace period</h3>
+      <p>Only applies to hard limits. When the limit is hit, instead of closing immediately, the app waits the grace period duration, then shows a final notification before closing. Options: 0 (close immediately), 5, 10, or 15 minutes.</p>
+
+      <div class="scenario">
+        <div class="scenario-label">📌 Real scenario</div>
+        <div class="scenario-title">You're coding and your "VS Code — 4h" limit hits</div>
+        <div class="scenario-body">With a 10-minute grace period set, a dialog appears: "VS Code will close in 10 minutes. Save your work." You finish your thought, save files, and the app closes cleanly. Without grace period, it would close immediately — risking unsaved work.</div>
+      </div>
+
+      <h3>Snooze</h3>
+      <p>When a hard limit fires, the notification dialog offers a <strong>Snooze</strong> button. Snoozed apps get a 15-minute override — the limit is temporarily suspended and the app stays open. After 15 minutes, the limit enforces again.</p>
+
+      <div class="scenario">
+        <div class="scenario-label">📌 Real scenario</div>
+        <div class="scenario-title">You're in a YouTube rabbit hole and hit your 1h limit</div>
+        <div class="scenario-body">The notification fires. You're in the middle of a video you actually care about. You hit Snooze — 15 more minutes. When snooze expires, the next notification fires again. This system creates intentional friction without being completely draconian.</div>
+      </div>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ APP USAGE ════ -->
+    <div class="doc-section" id="app-usage">
+      <h2>App Usage</h2>
+      <p>The App Usage tab shows a detailed table of every app tracked today — time spent, number of times opened, and category.</p>
+
+      <h3>Columns</h3>
+      <table class="doc-table">
+        <tr><th>Column</th><th>Description</th></tr>
+        <tr><td>App</td><td>App name with icon (if resolvable) and a proportional usage bar underneath.</td></tr>
+        <tr><td>Category</td><td>Auto-detected category. Click the pill to override it manually.</td></tr>
+        <tr><td>Time</td><td>Total tracked seconds today, displayed as Xh Ym.</td></tr>
+        <tr><td>Opens</td><td>How many times you switched to this app today (foreground focus count).</td></tr>
+      </table>
+
+      <h3>Changing a category</h3>
+      <p>Click any category pill — a dropdown appears with all 9 categories. Select one. The change is saved immediately and persists across restarts. Once you manually set a category, the auto-classifier won't override it.</p>
+
+      <div class="scenario">
+        <div class="scenario-label">📌 Real scenario</div>
+        <div class="scenario-title">Notion shows as "Productivity" but you use it for personal journaling</div>
+        <div class="scenario-body">Click the Productivity pill next to Notion → select "Other" (or create a mental note that it's personal). This affects the category breakdown chart on the Dashboard, giving you a more accurate picture of how much time is truly work vs personal.</div>
+      </div>
+
+      <h3>Sorting</h3>
+      <p>Click any column header to sort. Click again to reverse sort direction. The sort arrow shows the active column. Default sort is by Time (descending) — highest usage app at the top.</p>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ WEEKLY REPORT ════ -->
+    <div class="doc-section" id="weekly-report">
+      <h2>Weekly Report</h2>
+      <p>The Weekly Report gives you a broader view of your habits across the past 7 days.</p>
+
+      <h3>7-day bar chart</h3>
+      <p>Each bar represents total screen time for that day. The bars help you visually identify heavy days (usually weekdays) vs light days (weekends, or days you were productive offline).</p>
+
+      <h3>Top apps this week</h3>
+      <p>Your most-used apps ranked by total time across the 7-day window. Useful to compare against your daily top apps — sometimes an app you barely notice daily accumulates significant weekly hours.</p>
+
+      <h3>App consistency grid</h3>
+      <p>A 7-square grid per app showing which days that app was active (filled square) vs absent (empty square). Helps identify patterns like "I use Slack every weekday but never on weekends" or "I somehow opened TikTok 6 of the last 7 days."</p>
+
+      <h3>Category breakdown</h3>
+      <p>A summary of how time was distributed across categories this week (Browser, Development, Entertainment, etc.) — the same data as Dashboard but aggregated over 7 days.</p>
+
+      <div class="scenario">
+        <div class="scenario-label">📌 Real scenario</div>
+        <div class="scenario-title">You feel like you worked hard this week but still feel unproductive</div>
+        <div class="scenario-body">Open Weekly Report. You see 38 hours total screen time but the category breakdown shows Browser at 18 hours, Development at 12 hours, Entertainment at 5 hours. You worked 12 hours but "browsed" for 18. The report shows you the gap between effort and actual output time — without judgment, just data.</div>
+      </div>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ SETTINGS ════ -->
+    <div class="doc-section" id="settings">
+      <h2>Settings</h2>
+      <p>Settings is split into four sections: Tracking, Notifications &amp; Limits, Data, and About.</p>
+
+      <h3>Tracking</h3>
+      <table class="doc-table">
+        <tr><th>Setting</th><th>Options</th><th>Effect</th></tr>
+        <tr><td>Poll interval</td><td>3s / 5s / 10s / 30s</td><td>How often the active window is sampled. Lower = more accurate data, slightly higher CPU. 5s is the sweet spot. Use 10–30s on battery.</td></tr>
+        <tr><td>Daily screen time goal</td><td>3h – 10h</td><td>Sets the target for the heatmap calendar. Days under this goal show green. Doesn't enforce a limit — purely for visual tracking.</td></tr>
+        <tr><td>Launch at startup</td><td>On / Off</td><td>Registers or removes a Windows startup entry. When On, the app launches minimized to tray on every login.</td></tr>
+      </table>
+
+      <h3>Notifications &amp; Limits</h3>
+      <table class="doc-table">
+        <tr><th>Setting</th><th>Effect</th></tr>
+        <tr><td>Enable notifications</td><td>Master toggle. Off = no alerts fire regardless of limit settings.</td></tr>
+        <tr><td>Primary warning threshold</td><td>The main alert percentage — fires when usage reaches 50/70/80/90% of the daily limit.</td></tr>
+        <tr><td>50% warning</td><td>Optional early warning at the halfway mark. Good for apps with short limits (e.g., 30-min limit — get warned at 15 min).</td></tr>
+        <tr><td>95% warning</td><td>Final warning when only 5% remains. Especially useful for hard limits so you have time to wrap up.</td></tr>
+        <tr><td>Grace period</td><td>Delay before a hard limit closes the app. 0 = immediate. 5/10/15 min = save-work buffer. Applies to all hard limits globally.</td></tr>
+      </table>
+
+      <div class="callout tip">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body"><strong>Recommended setup for focus work:</strong> Primary threshold 80%, 95% warning On, Grace period 10 minutes. You get two warnings and time to save before anything closes.</div>
+      </div>
+
+      <h3>Data</h3>
+      <table class="doc-table">
+        <tr><th>Setting</th><th>Effect</th></tr>
+        <tr><td>Data retention</td><td>Auto-deletes usage records older than 7/30/90/365 days. Default 90 days. Lower = smaller DB, less historical data.</td></tr>
+        <tr><td>Export CSV</td><td>Downloads last 30 days of usage as <code>digital-wellbeing-YYYY-MM-DD.csv</code> to your Downloads folder. Columns: app_name, date, duration_seconds.</td></tr>
+      </table>
+
+      <h3>About</h3>
+      <p>Shows the current version, a link to Buy Me a Coffee if you'd like to support development, and a direct link to report bugs on GitHub Issues.</p>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ CATEGORIES ════ -->
+    <div class="doc-section" id="categories">
+      <h2>Categories</h2>
+      <p>Every tracked app is assigned a category automatically using a built-in classifier with 200+ known apps. You can override any category from the App Usage tab.</p>
+
+      <h3>App Usage categories (9 options)</h3>
+      <table class="doc-table">
+        <tr><th>Category</th><th>Example apps</th></tr>
+        <tr><td>Browser</td><td>Chrome, Edge, Firefox, Brave, Opera, Vivaldi</td></tr>
+        <tr><td>Development</td><td>VS Code, IntelliJ, Terminal, Figma, Postman, Claude, GitHub Desktop</td></tr>
+        <tr><td>Communication</td><td>Slack, Discord, Teams, Zoom, WhatsApp, Telegram, Signal</td></tr>
+        <tr><td>Productivity</td><td>Notion, Obsidian, Word, Excel, Todoist, Acrobat</td></tr>
+        <tr><td>Entertainment</td><td>Spotify, VLC, Netflix, YouTube, OBS, Twitch, Plex</td></tr>
+        <tr><td>Gaming</td><td>Steam, Epic Games, Valorant, Minecraft, League of Legends</td></tr>
+        <tr><td>Social</td><td>Instagram, Twitter/X, TikTok, Reddit, LinkedIn</td></tr>
+        <tr><td>Utility</td><td>File Explorer, Task Manager, 7-Zip, VirtualBox, ShareX</td></tr>
+        <tr><td>Other</td><td>Anything the classifier doesn't recognize</td></tr>
+      </table>
+
+      <h3>App Limits categories (5 options)</h3>
+      <p>When creating a limit in App Limits, you pick from a simpler set: <strong>Work</strong>, <strong>Social</strong>, <strong>Entertainment</strong>, <strong>Utility</strong>, <strong>Other</strong>. These feed the productivity breakdown alongside the is_productive flag per limit.</p>
+
+      <h3>How classification works</h3>
+      <p>The classifier uses two strategies in order:</p>
+      <ol style="color:var(--text-muted); font-size:14px; line-height:2; padding-left:20px; margin-bottom:14px;">
+        <li><strong style="color:var(--text)">Exact match</strong> — looks up the app name directly in a 200+ entry table</li>
+        <li><strong style="color:var(--text)">Substring match</strong> — checks if the name contains keywords like "chrome", "slack", "studio", etc.</li>
+      </ol>
+      <p>If both fail, the app is filed under "Other". You can always correct it via the category dropdown in App Usage.</p>
+
+      <h3>User overrides persist</h3>
+      <p>When you manually change a category, it's saved to the database with a <code>user_overridden = 1</code> flag. The classifier never overwrites a user-set category, even across app restarts or updates.</p>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ NOTIFICATIONS ════ -->
+    <div class="doc-section" id="notifications">
+      <h2>Notifications</h2>
+      <p>Notifications are Windows system notifications triggered by the Electron main process — they appear in the bottom-right corner and in the Windows notification center.</p>
+
+      <h3>Notification types</h3>
+      <table class="doc-table">
+        <tr><th>Trigger</th><th>Message example</th></tr>
+        <tr><td>50% warning (optional)</td><td>"YouTube — 50% of daily limit reached (30 min used)"</td></tr>
+        <tr><td>Primary warning (80% default)</td><td>"Chrome — 80% of daily limit reached (48 min used)"</td></tr>
+        <tr><td>95% warning (optional)</td><td>"Twitter — 95% of limit reached. 3 minutes left."</td></tr>
+        <tr><td>Hard limit hit</td><td>Dialog box: "YouTube limit reached. Got it / Snooze / Edit Limits"</td></tr>
+      </table>
+
+      <h3>Notification reset</h3>
+      <p>All notification flags reset at midnight every day. So if you get a 95% warning on Monday, you'll get it again on Tuesday once you hit 95% again — the app doesn't remember "I already warned you" across days.</p>
+
+      <div class="callout info">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body"><strong>Windows Focus Assist:</strong> If Windows Focus Assist (Do Not Disturb) is on, app limit notifications may be suppressed. Check your Windows notification settings if alerts aren't appearing.</div>
+      </div>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ PRIVACY ════ -->
+    <div class="doc-section" id="privacy">
+      <h2>Privacy &amp; Data</h2>
+      <p>Digital Wellbeing is designed to be completely private. No account, no cloud, no analytics.</p>
+
+      <h3>What data is stored</h3>
+      <table class="doc-table">
+        <tr><th>Data</th><th>Where</th><th>What's recorded</th></tr>
+        <tr><td>Usage logs</td><td><code>%APPDATA%\digital-wellbeing\wellbeing.db</code></td><td>app_name, date, timestamp, duration_seconds. No window titles. No URLs. No keystrokes.</td></tr>
+        <tr><td>App limits</td><td>Same SQLite DB</td><td>Limit config per app. Stored locally.</td></tr>
+        <tr><td>Settings</td><td>Same SQLite DB</td><td>Your preferences. No identifiers.</td></tr>
+        <tr><td>Update checks</td><td>GitHub API</td><td>Fetches latest release version number. No device ID sent.</td></tr>
+      </table>
+
+      <h3>What is never collected</h3>
+      <ul style="color:var(--text-muted); font-size:14px; line-height:2.1; padding-left:20px;">
+        <li>Window titles or browser URLs</li>
+        <li>Keystrokes or clipboard content</li>
+        <li>Screenshots or screen recordings</li>
+        <li>Any personally identifiable information</li>
+        <li>Usage patterns sent to a server</li>
+      </ul>
+
+      <h3>Deleting your data</h3>
+      <p>Delete <code>%APPDATA%\digital-wellbeing\</code> to remove everything — database, settings, and all history. The app will create a fresh DB on next launch.</p>
+
+      <h3>CSV export</h3>
+      <p>Settings → Data → Export CSV downloads the last 30 days as a CSV file to your Downloads folder. You can import this into Excel, Google Sheets, or any analytics tool to run your own analysis.</p>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ FAQ ════ -->
+    <div class="doc-section" id="faq">
+      <h2>FAQ</h2>
+
+      <div class="faq-list">
+
+        <details class="faq-item">
+          <summary><span class="faq-num">1</span>Does this work on macOS or Linux?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>Windows-only. macOS and Linux have placeholder stubs but active development and testing is Windows 10/11 only. macOS/Linux tracking will not work correctly.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary><span class="faq-num">2</span>Can I use this on multiple PCs?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>Each install tracks independently — there's no sync. Export CSV from each machine and combine them manually if you want unified data.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary><span class="faq-num">3</span>Will the app slow down my PC?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>No. The tracker uses a lightweight Windows API call every 5 seconds. Memory footprint is ~50–80 MB. CPU impact is negligible. On battery-constrained devices, set the poll interval to 10 or 30 seconds in Settings → Tracking.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary><span class="faq-num">4</span>Hard limit isn't closing the app — what's wrong?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>Check that the bell icon on the limit card is 🔔 (not 🔕 which is soft mode). The target app must also be running as a visible foreground process. Some protected UWP apps (Microsoft Store apps) may resist force-kill due to Windows app sandboxing.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary><span class="faq-num">5</span>Can I track time on multiple monitors?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>The tracker records whichever window is currently receiving keyboard/mouse focus (the foreground window). Secondary monitor windows that are visible but not focused are not tracked — this is a Windows API limitation.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary><span class="faq-num">6</span>The app isn't tracking when my screen is idle — is that a bug?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>Correct behavior. The tracker only records the active foreground window. If your screen is locked, the PC is idle, or no app is in focus, nothing is recorded. You shouldn't be charged screen time while not actively using the computer.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary><span class="faq-num">7</span>Why does "OpenWith" or "WerFault" appear in my tracked apps?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>These are Windows system dialogs that briefly become the foreground window (OpenWith = right-click "Open with" dialog; WerFault = crash reporter). Fixed in v3.0.0 — both are in the system blocklist and won't be tracked anymore.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary><span class="faq-num">8</span>Why does the app show "WhatsApp" and "WhatsApp.Root" as separate entries?<span class="faq-chevron">▾</span></summary>
+          <div class="faq-body"><p>WhatsApp on Windows uses multiple UWP processes — <code>WhatsApp.Root</code> is a background host. From v3.0.0, these are normalized: suffixes like <code>.Root</code>, <code>.Desktop</code>, and <code>.BackgroundHost</code> are stripped before recording. Old entries stay in history but new data merges correctly.</p></div>
+        </details>
+
+      </div>
+    </div>
+
+    <div class="doc-divider"></div>
+
+    <!-- ════ TROUBLESHOOTING ════ -->
+    <div class="doc-section" id="troubleshoot">
+      <h2>Troubleshooting</h2>
+
+      <h3>App not tracking anything</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Check the tray icon</div>
+            <div class="step-desc">Look for the Digital Wellbeing icon in the system tray. If it's not there, the app isn't running. Launch it from the Start menu or desktop shortcut.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Check the Dashboard</div>
+            <div class="step-desc">Open the app and watch the Dashboard. Switch to another app and back. Within 5–10 seconds, you should see usage appear. If nothing changes after 30 seconds, proceed to step 3.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Restart the app</div>
+            <div class="step-desc">Right-click the tray icon → Quit. Relaunch from Start menu. The tracker starts fresh on each launch.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Report the issue</div>
+            <div class="step-desc">If it still doesn't track, go to Settings → About → Report a bug. Include your Windows version and what apps you were using when it stopped tracking.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Notifications not appearing</h3>
+      <ul style="color:var(--text-muted); font-size:14px; line-height:2.2; padding-left:20px;">
+        <li>Check Settings → Notifications → Enable notifications is <strong style="color:var(--text)">On</strong></li>
+        <li>Check Windows Settings → System → Notifications — make sure Digital Wellbeing is allowed</li>
+        <li>Check Windows Focus Assist is not set to "Alarms only" or "Priority only"</li>
+        <li>Make sure a limit actually exists for the app you're testing</li>
+      </ul>
+
+      <h3>Auto-update isn't working</h3>
+      <p>The app checks for updates every 4 hours at startup. If you want to check manually, restart the app. If an update is available, a banner appears at the top of the interface. If no banner appears after restarting, you're already on the latest version.</p>
+
+      <h3>App crashes on launch</h3>
+      <p>Try deleting the database: open <code>%APPDATA%\digital-wellbeing\</code> in File Explorer and delete <code>wellbeing.db</code>. Relaunch the app — it creates a fresh database automatically. Note: this clears all history.</p>
+
+      <div class="callout info">
+        <div class="callout-icon">🐛</div>
+        <div class="callout-body">Found a bug not covered here? <a href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/issues/new" target="_blank">Open a GitHub issue</a> with your Windows version, app version (Settings → About), and steps to reproduce.</div>
+      </div>
+
+      <div style="margin-top:48px; padding:28px; border-radius:16px; background: rgba(139,92,246,0.07); border: 1px solid rgba(139,92,246,0.2); text-align:center;">
+        <div style="font-size:22px; font-weight:700; margin-bottom:8px;">Ready to take back your time?</div>
+        <div style="font-size:14px; color:var(--text-muted); margin-bottom:20px;">Free. No account. No cloud. Just focus.</div>
+        <a href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/releases/latest/download/Digital-Wellbeing-Setup-3.0.0.exe" style="display:inline-flex; align-items:center; gap:8px; padding:12px 26px; border-radius:14px; background:var(--grad); color:white; font-weight:700; font-size:15px; text-decoration:none;">
+          Download for Windows
+        </a>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer class="docs-footer">
+  <span>Digital Wellbeing v3.0.0 · Built by <a href="https://buymeacoffee.com/nikh315" target="_blank">Nikh</a> · <a href="https://github.com/Sainikhil-315/digital-wellbeing-desktop" target="_blank">GitHub</a> · <a href="https://github.com/Sainikhil-315/digital-wellbeing-desktop/issues/new" target="_blank">Report a bug</a></span>
+</footer>
+
+<script>
+  // ── Reading progress line ──
+  const bar = document.getElementById('toc-progress')
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100
+    bar.style.height = pct + '%'
+  })
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('.doc-section')
+  const links = document.querySelectorAll('.sidebar-link')
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'))
+        const active = document.querySelector(`.sidebar-link[href="#${e.target.id}"]`)
+        if (active) active.classList.add('active')
+      }
+    })
+  }, { rootMargin: '-20% 0px -70% 0px' })
+  sections.forEach(s => io.observe(s))
+</script>
+
+</body>
+</html>

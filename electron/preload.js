@@ -21,8 +21,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.invoke('window-maximize'),
   windowClose:    () => ipcRenderer.invoke('window-close'),
 
-  startFocusMode: (apps) => ipcRenderer.invoke('start-focus-mode', { apps }),
-  stopFocusMode:  () => ipcRenderer.invoke('stop-focus-mode'),
+  getAppUsageDetailed:  () => ipcRenderer.invoke('get-app-usage-detailed'),
+  getAppIcon:           (data) => ipcRenderer.invoke('get-app-icon', data),
+  setAppCategory:       (data) => ipcRenderer.invoke('set-app-category', data),
+  getCategoryBreakdown: () => ipcRenderer.invoke('get-category-breakdown'),
+  getProductivityScore: () => ipcRenderer.invoke('get-productivity-score'),
+  getStreak:            () => ipcRenderer.invoke('get-streak'),
+  getAppTrends:         () => ipcRenderer.invoke('get-app-trends'),
+  getUsageCalendar:     (days) => ipcRenderer.invoke('get-usage-calendar', days),
+
+  getDayBounds:      () => ipcRenderer.invoke('get-day-bounds'),
+  getLongestFocus:   () => ipcRenderer.invoke('get-longest-focus'),
+  getWeekComparison: () => ipcRenderer.invoke('get-week-comparison'),
+  getWeeklyHeatmap:  () => ipcRenderer.invoke('get-weekly-heatmap'),
+  getWeeklyTopApps:  () => ipcRenderer.invoke('get-weekly-top-apps'),
 
   onUpdateStatus: (callback) => {
     const handler = (_, data) => callback(data)

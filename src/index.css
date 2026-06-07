@@ -1,32 +1,61 @@
 :root {
-  --bg-base:       #0D0D0D;
-  --bg-surface:    #141414;
-  --bg-raised:     #1A1A1A;
-  --bg-hover:      #222222;
-  --border:        rgba(255,255,255,0.07);
-  --border-bright: rgba(255,255,255,0.13);
+  --bg-base:        #080810;
+  --bg-surface:     #0f0f1a;
+  --bg-raised:      #161624;
+  --bg-hover:       #1e1e30;
+  --bg-glass:       rgba(22, 22, 36, 0.55);
+  --bg-glass-heavy: rgba(15, 15, 26, 0.72);
 
-  --text-primary:   #F0EDE8;
-  --text-secondary: #888580;
-  --text-muted:     #4A4845;
+  --border:         rgba(255, 255, 255, 0.06);
+  --border-bright:  rgba(255, 255, 255, 0.12);
+  --border-glass:   rgba(255, 255, 255, 0.09);
+  --border-glow:    rgba(99, 102, 241, 0.45);
 
-  --red:     #E24B4A;
-  --red-dim: rgba(226,75,74,0.15);
-  --amber:   #D4821A;
-  --amber-dim: rgba(212,130,26,0.15);
-  --green:   #5C9E2E;
-  --green-dim: rgba(92,158,46,0.15);
-  --blue:    #4B8FE2;
-  --purple:  #7C5CBF;
+  --text-primary:   #F0EDF8;
+  --text-secondary: #8884A0;
+  --text-muted:     #48455A;
+
+  --accent:      #6366F1;
+  --accent-dim:  rgba(99, 102, 241, 0.15);
+  --accent-glow: rgba(99, 102, 241, 0.30);
+
+  --red:       #E24B4A;
+  --red-dim:   rgba(226, 75, 74, 0.14);
+  --amber:     #D4821A;
+  --amber-dim: rgba(212, 130, 26, 0.14);
+  --green:     #5C9E2E;
+  --green-dim: rgba(92, 158, 46, 0.14);
+  --blue:      #4B8FE2;
+  --blue-dim:  rgba(75, 143, 226, 0.14);
+  --purple:    #7C5CBF;
+
+  --cat-work:          #6366F1;
+  --cat-social:        #E24B4A;
+  --cat-entertainment: #D4821A;
+  --cat-utility:       #4B8FE2;
+  --cat-other:         #7C5CBF;
 
   --font-sans: 'DM Sans', sans-serif;
   --font-mono: 'Space Mono', monospace;
 
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --blur-glass: blur(12px);
+  --blur-heavy: blur(20px);
+
+  --shadow-card:     0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px var(--border-glass);
+  --shadow-elevated: 0 4px 24px rgba(0,0,0,0.55), 0 0 0 1px var(--border-glass);
+  --shadow-glow:     0 0 24px var(--accent-glow);
+
+  --t-fast: 0.12s ease;
+  --t-base: 0.20s ease;
+  --t-slow: 0.35s ease;
 
   --titlebar-height: 38px;
+  --sidebar-width:   188px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

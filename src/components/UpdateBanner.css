@@ -1,17 +1,21 @@
 .update-banner {
   margin: 8px 8px 4px;
   padding: 10px 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-bright);
-  background: var(--bg-raised);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
   display: flex;
   align-items: center;
   gap: 10px;
   text-align: left;
   width: calc(100% - 16px);
   cursor: default;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--t-base), border-color var(--t-base);
   animation: slideUp 0.25s ease;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes slideUp {
@@ -31,13 +35,13 @@
 
 /* ── Ready state ── */
 .update-banner--ready {
-  background: #141a12;
+  background: rgba(92, 158, 46, 0.10);
   border-color: rgba(92, 158, 46, 0.35);
   cursor: pointer;
   font-family: var(--font-sans);
 }
 .update-banner--ready:hover {
-  background: #192016;
+  background: rgba(92, 158, 46, 0.15);
   border-color: rgba(92, 158, 46, 0.6);
 }
 

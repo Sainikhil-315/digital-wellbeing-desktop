@@ -1,0 +1,90 @@
+// Raw process names (lowercase) — filtered before any recording happens
+const BLOCKED_PROCESSES = new Set([
+  'shellexperiencehost',
+  'startmenuexperiencehost',
+  'searchhost',
+  'searchapp',
+  'textinputhost',
+  'lockapp',
+  'logonui',
+  'winlogon',
+  'runtimebroker',
+  'applicationframehost',
+  'systemsettings',
+  'snippingtool',
+  'snippinghost',
+  'taskhostw',
+  'taskhost',
+  'dwm',
+  'explorer',          // File Explorer
+  'digitalwellbeing',  // our own app
+  'electron',
+  'csrss',
+  'smss',
+  'lsass',
+  'services',
+  'svchost',
+  'wininit',
+  'fontdrvhost',
+  'ctfmon',
+  'sihost',
+  'spoolsv',
+  'audiodg',
+  'mpcmdrun',
+  'dashost',
+  'conhost',
+  'dllhost',
+  'wuauclt',
+  'msiexec',
+  'backgroundtaskhost',
+  'useroobebroker',
+  'securityhealthsystray',
+  'securityhealthservice',
+  'registry',
+  'system',
+  'idle',
+  'openwith',
+  'openfiledlg',
+  'printdialog',
+  'splashscreen',
+  'crashpad_handler',
+  'werfault',
+  'werfaultsecure',
+  'msedgewebview2',
+  'video.ui',
+  'photos',
+  'microsoft.photos',
+])
+
+// Friendly names to purge from existing DB data (case-insensitive match)
+const BLOCKED_FRIENDLY_LOWER = new Set([
+  'shellexperiencehost',
+  'startmenuexperiencehost',
+  'searchhost',
+  'textinputhost',
+  'lockapp',
+  'logonui',
+  'runtimebroker',
+  'applicationframehost',
+  'systemsettings',
+  'snippingtool',
+  'taskhostw',
+  'dwm',
+  'file explorer',
+  'digital wellbeing',
+  'electron',
+  'conhost',
+  'ctfmon',
+  'sihost',
+  'backgroundtaskhost',
+  'openwith',
+  'werfault',
+])
+
+// SQL fragment — call buildExcludeClause(tableAlias) to get WHERE snippet
+function buildExcludeClause(col = 'app_name') {
+  const list = [...BLOCKED_FRIENDLY_LOWER].map(n => `'${n.replace(/'/g, "''")}'`).join(',')
+  return `LOWER(${col}) NOT IN (${list})`
+}
+
+module.exports = { BLOCKED_PROCESSES, BLOCKED_FRIENDLY_LOWER, buildExcludeClause }

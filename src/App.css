@@ -27,8 +27,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 6px var(--red);
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 .titlebar-title {
   font-size: 11px;
@@ -53,7 +53,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--t-fast), color var(--t-fast);
 }
 .wbtn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .wbtn-close:hover { background: var(--red-dim); color: var(--red); }
@@ -67,14 +67,17 @@
 
 /* ── Sidebar ── */
 .sidebar {
-  width: 196px;
+  width: var(--sidebar-width);
   flex-shrink: 0;
-  background: var(--bg-surface);
+  background: var(--bg-glass-heavy);
+  backdrop-filter: var(--blur-heavy);
+  -webkit-backdrop-filter: var(--blur-heavy);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 12px 0;
 }
+
 .sidebar-nav {
   flex: 1;
   display: flex;
@@ -95,13 +98,13 @@
   font-weight: 400;
   width: 100%;
   text-align: left;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--t-fast), color var(--t-fast);
   position: relative;
 }
 .nav-item i { font-size: 16px; flex-shrink: 0; }
-.nav-item:hover { background: var(--bg-raised); color: var(--text-primary); }
+.nav-item:hover { background: rgba(99, 102, 241, 0.08); color: var(--text-primary); }
 .nav-item.active {
-  background: var(--bg-raised);
+  background: rgba(99, 102, 241, 0.12);
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -112,12 +115,13 @@
   top: 20%;
   height: 60%;
   width: 2px;
-  background: var(--red);
+  background: var(--accent);
   border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 .nav-badge {
   margin-left: auto;
-  background: var(--red);
+  background: var(--accent);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -134,9 +138,11 @@
 .sidebar-stats {
   margin: 12px 8px 4px;
   padding: 10px 12px;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -191,13 +197,74 @@
   padding: 20px;
 }
 
-/* ── Shared card ── */
+/* ── Shared card (flat — fallback) ── */
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 16px;
 }
+
+/* ── Glass card — primary ── */
+.card-glass {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--t-base), transform var(--t-base), border-color var(--t-base);
+}
+.card-glass:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-elevated);
+  border-color: var(--border-bright);
+}
+
+/* ── Elevated glass — hero metric cards ── */
+.card-elevated {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-elevated);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--t-base), transform var(--t-base);
+}
+.card-elevated:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 32px rgba(0,0,0,0.65), 0 0 0 1px var(--border-bright);
+}
+.card-elevated::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--border-bright) 30%,
+    var(--border-bright) 70%,
+    transparent 100%
+  );
+}
+
+/* ── Accent card variant ── */
+.card-accent {
+  background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, var(--bg-glass) 60%);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.10), var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+
 .card-title {
   font-size: 11px;
   font-weight: 600;
@@ -222,18 +289,18 @@
 .pill-red    { background: var(--red-dim);   color: var(--red);   }
 .pill-amber  { background: var(--amber-dim); color: var(--amber); }
 .pill-green  { background: var(--green-dim); color: var(--green); }
-.pill-blue   { background: rgba(75,143,226,.15); color: var(--blue); }
+.pill-blue   { background: var(--blue-dim);  color: var(--blue);  }
 
 /* ── Shared progress bar ── */
 .prog-wrap {
   background: var(--bg-raised);
-  border-radius: 2px;
+  border-radius: 3px;
   height: 5px;
   overflow: hidden;
 }
 .prog-bar {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
   transition: width 0.5s ease;
 }
 
@@ -252,8 +319,8 @@
 }
 .btn-retry {
   padding: 6px 16px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
   background: var(--bg-raised);
   color: var(--text-secondary);
   font-size: 12px;

@@ -1,0 +1,208 @@
+.app-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.usage-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.usage-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.usage-count { font-size: 11px; color: var(--text-muted); }
+.usage-total { font-size: 11px; color: var(--text-secondary); }
+
+.usage-empty {
+  padding: 32px 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* ── Table ── */
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.usage-table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.usage-table th {
+  padding: 8px 18px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: left;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.th-btn {
+  cursor: pointer;
+  transition: color var(--t-fast);
+}
+.th-btn:hover { color: var(--text-secondary); }
+
+.sort-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 3px;
+  position: relative;
+  top: -1px;
+}
+.sort-idle   { color: var(--text-muted); opacity: 0.4; }
+.sort-active { color: var(--accent); }
+
+.usage-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background var(--t-fast);
+}
+.usage-table tbody tr:last-child { border-bottom: none; }
+.usage-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+.row-even { background: rgba(255,255,255,0.012); }
+
+.usage-table td {
+  padding: 10px 18px;
+  vertical-align: middle;
+}
+
+/* ── Columns ── */
+.col-app  { width: 45%; }
+.col-cat  { width: 20%; }
+.col-time { width: 18%; font-size: 12px; color: var(--text-secondary); }
+.col-opens { width: 12%; font-size: 12px; color: var(--text-muted); text-align: right; }
+
+.app-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.app-icon-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.app-icon-letter {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.app-name-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.app-bar-row {
+  padding-left: 14px;
+  height: 3px;
+  background: var(--bg-raised);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.app-usage-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.cat-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.cat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.cat-pill-btn {
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--t-fast), filter var(--t-fast);
+}
+.cat-pill-btn:hover { filter: brightness(1.15); }
+
+.cat-pill-caret {
+  font-size: 8px;
+  opacity: 0.7;
+  margin-left: 1px;
+}
+
+/* ── Category dropdown ── */
+.cat-dropdown {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-elevated);
+  padding: 4px;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: fadeIn 0.12s ease;
+}
+
+.cat-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-fast), color var(--t-fast);
+  width: 100%;
+}
+.cat-option:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.cat-option.selected {
+  color: var(--opt-color, var(--accent));
+  font-weight: 600;
+}
+
+.cat-option-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

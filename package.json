@@ -1,6 +1,6 @@
 {
   "name": "digital-wellbeing",
-  "version": "2.3.1",
+  "version": "3.0.0",
   "description": "Desktop screen time tracker and focus tool",
   "main": "electron/main.js",
   "scripts": {

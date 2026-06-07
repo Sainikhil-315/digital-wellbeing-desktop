@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, Component } from 'react'
 import {
   IconLayoutDashboard,
+  IconApps,
   IconClockPause,
-  IconFocus2,
   IconCalendarStats,
   IconSettings,
   IconMinus,
@@ -11,8 +11,8 @@ import {
 } from '@tabler/icons-react'
 import './App.css'
 import Dashboard from './components/Dashboard.jsx'
+import AppUsage from './components/AppUsage.jsx'
 import AppLimits from './components/AppLimits.jsx'
-import FocusMode from './components/FocusMode.jsx'
 import WeeklyReport from './components/WeeklyReport.jsx'
 import Settings from './components/Settings.jsx'
 import UpdateBanner from './components/UpdateBanner.jsx'
@@ -26,7 +26,7 @@ const api = window.electronAPI || {
   removeLimit: async () => {},
   getSessions: async () => [],
   saveSession: async () => {},
-  getStats: async () => ({ today_seconds: 0, weekly_avg_seconds: 0, focus_today_seconds: 0, limit_alerts: 0 }),
+  getStats: async () => ({ today_seconds: 0, weekly_avg_seconds: 0, limit_alerts: 0 }),
   getSettings: async () => ({}),
   saveSetting: async () => {},
   exportCsv: async () => ({ ok: false }),
@@ -35,6 +35,18 @@ const api = window.electronAPI || {
   windowMinimize: () => {},
   windowMaximize: () => {},
   windowClose: () => {},
+  getCategoryBreakdown: async () => [],
+  getProductivityScore: async () => ({ score: 0, productive_seconds: 0, total_seconds: 0 }),
+  getStreak:            async () => 0,
+  getAppTrends:         async () => ({}),
+  getUsageCalendar:     async () => [],
+  getAppUsageDetailed:  async () => [],
+  getAppIcon:           async () => null,
+  getDayBounds:         async () => ({ first_ts: 0, last_ts: 0 }),
+  getLongestFocus:      async () => null,
+  getWeekComparison:    async () => ({ this_week_seconds: 0, last_week_seconds: 0, same_day_last_week_seconds: 0 }),
+  getWeeklyHeatmap:     async () => ({ days: [], matrix: [] }),
+  getWeeklyTopApps:     async () => [],
 }
 
 class ErrorBoundary extends Component {
@@ -55,8 +67,8 @@ class ErrorBoundary extends Component {
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard',     icon: IconLayoutDashboard },
+  { id: 'apps',      label: 'App Usage',     icon: IconApps },
   { id: 'limits',    label: 'App Limits',    icon: IconClockPause },
-  { id: 'focus',     label: 'Focus Mode',    icon: IconFocus2 },
   { id: 'weekly',    label: 'Weekly Report', icon: IconCalendarStats },
 ]
 
@@ -124,6 +136,14 @@ export default function App() {
             })}
           </nav>
 
+          <button
+            className={`nav-item settings-nav-btn ${tab === 'settings' ? 'active' : ''}`}
+            onClick={() => setTab('settings')}
+          >
+            <IconSettings size={20} />
+            <span>Settings</span>
+          </button>
+
           {/* Quick stats at bottom of sidebar */}
           {stats && (
             <div className="sidebar-stats">
@@ -135,21 +155,8 @@ export default function App() {
                 <span className="ss-label">Wk avg</span>
                 <span className="ss-val mono">{fmtSeconds(stats.weekly_avg_seconds)}</span>
               </div>
-              <div className="ss-row">
-                <span className="ss-label">Focus</span>
-                <span className="ss-val mono" style={{color:'var(--green)'}}>{fmtSeconds(stats.focus_today_seconds)}</span>
-              </div>
             </div>
           )}
-
-          {/* Settings button below stats */}
-          <button
-            className={`nav-item settings-nav-btn ${tab === 'settings' ? 'active' : ''}`}
-            onClick={() => setTab('settings')}
-          >
-            <IconSettings size={20} />
-            <span>Settings</span>
-          </button>
 
           <UpdateBanner />
         </aside>
@@ -167,11 +174,11 @@ export default function App() {
 
           <div className="content-body">
             <ErrorBoundary key={tab}>
-              {tab === 'dashboard' && <Dashboard api={api} refreshKey={refreshKey} />}
-              {tab === 'limits'    && <AppLimits api={api} refreshKey={refreshKey} onRefresh={refresh} />}
-              {tab === 'focus'     && <FocusMode api={api} refreshKey={refreshKey} onRefresh={refresh} />}
+              {tab === 'dashboard' && <Dashboard  api={api} refreshKey={refreshKey} />}
+              {tab === 'apps'      && <AppUsage   api={api} refreshKey={refreshKey} />}
+              {tab === 'limits'    && <AppLimits  api={api} refreshKey={refreshKey} onRefresh={refresh} />}
               {tab === 'weekly'    && <WeeklyReport api={api} refreshKey={refreshKey} />}
-              {tab === 'settings'  && <Settings api={api} />}
+              {tab === 'settings'  && <Settings   api={api} />}
             </ErrorBoundary>
           </div>
         </main>

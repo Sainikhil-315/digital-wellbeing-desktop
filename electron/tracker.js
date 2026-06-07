@@ -3,6 +3,7 @@ const { platform } = require('os')
 const fs = require('fs')
 const path = require('path')
 const os_module = require('os')
+const { BLOCKED_PROCESSES } = require('./blocklist')
 
 const os = platform()
 
@@ -24,6 +25,14 @@ const STATIC_MAP = {
   'figma':           'Figma',
   'obs64':           'OBS Studio',
   'obs32':           'OBS Studio',
+  'whatsapp':        'WhatsApp',
+  'telegram':        'Telegram',
+  'signal':          'Signal',
+}
+
+// Strip UWP host/helper suffixes before lookup
+function normalizeProcessName(raw) {
+  return raw.replace(/\.(root|desktop|backgroundhost|helper|backgroundtaskhost)$/i, '').trim()
 }
 
 const STATIC_REVERSE = {}
@@ -140,12 +149,14 @@ Write-Output $proc
 }
 
 function resolveProcessName(rawName) {
-  const lower = rawName.toLowerCase()
+  const normalized = normalizeProcessName(rawName)
+  const lower = normalized.toLowerCase()
+  if (BLOCKED_PROCESSES.has(lower)) return null
   for (const [key, val] of Object.entries(STATIC_MAP)) {
     if (lower.includes(key)) return val
   }
   if (dynamicMap[lower]) return dynamicMap[lower]
-  return rawName.charAt(0).toUpperCase() + rawName.slice(1)
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
 function pollMacOS(callback) {

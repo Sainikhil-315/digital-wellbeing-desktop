@@ -2,14 +2,15 @@ const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, dialog, shell } =
 const path = require('path')
 const fs = require('fs')
 const { exec } = require('child_process')
+const iconResolver = require('./iconResolver')
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+
+// Force same userData path in dev as prod so both share the same DB
+if (isDev) app.setName('Digital Wellbeing')
 
 let mainWindow
 let tray = null
 let trackerInterval = null
-let focusModeActive = false
-let whitelistedApps = []
-let focusModeInterval = null
 const graceTimers = new Map() // appName → setTimeout id
 
 
@@ -109,12 +110,18 @@ app.whenReady().then(async () => {
 
   setupAutoUpdater()
 
+  let lastTrackedApp = null
+
   function startTrackerInterval(intervalMs) {
     if (trackerInterval) clearInterval(trackerInterval)
     trackerInterval = setInterval(() => {
       tracker.pollActiveWindow((appName) => {
         if (appName) {
           db.recordUsage(appName)
+          if (appName !== lastTrackedApp) {
+            db.recordAppFocus(appName)
+            lastTrackedApp = appName
+          }
           checkLimitAlerts(appName, db)
         }
       })
@@ -249,25 +256,6 @@ function killProcess(processName) {
   exec(`powershell -Command "${killCmd.replace(/"/g, '\\"')}"`, () => {})
 }
 
-function killNonWhitelistedApps() {
-  const tracker = require('./tracker')
-  const allApps = tracker.getAllKnownApps() // { processName: displayName }
-  Object.entries(allApps).forEach(([processName, displayName]) => {
-    if (whitelistedApps.includes(displayName) || displayName === 'File Explorer') return
-    killProcess(processName)
-  })
-}
-
-function monitorForBlockedApps() {
-  if (!focusModeActive) return
-  const tracker = require('./tracker')
-  const allApps = tracker.getAllKnownApps()
-  Object.entries(allApps).forEach(([processName, displayName]) => {
-    if (whitelistedApps.includes(displayName) || displayName === 'File Explorer') return
-    killProcess(processName)
-  })
-}
-
 function setupIPC(db, startTrackerInterval) {
   ipcMain.handle('get-today-usage',  () => db.getTodayUsage())
   ipcMain.handle('get-weekly-usage', () => db.getWeeklyUsage())
@@ -341,28 +329,24 @@ function setupIPC(db, startTrackerInterval) {
     autoUpdater.quitAndInstall()
   })
 
-  // Focus mode handlers
-  ipcMain.handle('start-focus-mode', (_, { apps }) => {
-    focusModeActive = true
-    whitelistedApps = apps
-    killNonWhitelistedApps()
-    
-    // Monitor for blocked app attempts every 1 second (aggressive blocking)
-    if (focusModeInterval) clearInterval(focusModeInterval)
-    focusModeInterval = setInterval(monitorForBlockedApps, 1000)
-    
-    return true
+  ipcMain.handle('get-app-usage-detailed', () => db.getAppUsageDetailed())
+  ipcMain.handle('get-app-icon', async (_, { app_name, process_name }) => {
+    const tracker = require('./tracker')
+    const procName = process_name || tracker.getProcessNameFor(app_name)
+    return iconResolver.resolveIcon(app_name, procName)
   })
+  ipcMain.handle('get-category-breakdown', () => db.getCategoryBreakdown())
+  ipcMain.handle('get-productivity-score',  () => db.getProductivityScore())
+  ipcMain.handle('get-streak',              () => db.getStreak())
+  ipcMain.handle('get-app-trends',          () => db.getAppTrends())
+  ipcMain.handle('get-usage-calendar',      (_, days) => db.getUsageCalendar(days || 365))
 
-  ipcMain.handle('stop-focus-mode', () => {
-    focusModeActive = false
-    whitelistedApps = []
-    if (focusModeInterval) {
-      clearInterval(focusModeInterval)
-      focusModeInterval = null
-    }
-    return true
-  })
+  ipcMain.handle('open-external',       (_, url) => shell.openExternal(url))
 
-  ipcMain.handle('open-external', (_, url) => shell.openExternal(url))
+  ipcMain.handle('get-day-bounds',      () => db.getDayBounds())
+  ipcMain.handle('get-longest-focus',   () => db.getLongestFocusBlock())
+  ipcMain.handle('get-week-comparison', () => db.getWeekComparison())
+  ipcMain.handle('get-weekly-heatmap',  () => db.getWeeklyHeatmap())
+  ipcMain.handle('get-weekly-top-apps', () => db.getWeeklyTopApps())
+  ipcMain.handle('set-app-category', (_, { app_name, category }) => db.setAppCategory(app_name, category))
 }
