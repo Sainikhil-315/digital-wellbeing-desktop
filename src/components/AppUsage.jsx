@@ -168,12 +168,16 @@ const DROPDOWN_H = 310
 function CategoryPill({ category, color, onSelect }) {
   const [open, setOpen]   = useState(false)
   const [style, setStyle] = useState({})
-  const btnRef = useRef(null)
+  const btnRef      = useRef(null)
+  const dropdownRef = useRef(null)
 
   useEffect(() => {
     if (!open) return
     function handler(e) {
-      if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false)
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -207,7 +211,7 @@ function CategoryPill({ category, color, onSelect }) {
         <span className="cat-pill-caret">▾</span>
       </button>
       {open && createPortal(
-        <div className="cat-dropdown" style={style}>
+        <div className="cat-dropdown" style={style} ref={dropdownRef}>
           {CATEGORIES.map(cat => {
             const c = catColor(cat)
             return (
