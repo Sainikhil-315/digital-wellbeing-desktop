@@ -78,6 +78,7 @@
       display: flex; align-items: center; justify-content: center;
     }
     .nav-links { display: flex; align-items: center; gap: 6px; list-style: none; }
+    .nav-hamburger { display: none; }
     .nav-links a {
       color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500;
       padding: 6px 13px; border-radius: 10px; transition: color 0.2s, background 0.2s;
@@ -319,6 +320,28 @@
     @media (max-width: 860px) {
       .docs-sidebar { display: none; }
       .docs-content { padding: 16px 20px 60px; }
+      nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); padding: 12px 20px; }
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0; right: 0;
+        flex-direction: column;
+        background: rgba(8,8,24,0.97);
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        border-radius: 0 0 16px 16px;
+        padding: 16px 20px 20px;
+        gap: 4px;
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 10px 0; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.06); border-radius: 0; }
+      .nav-links li:last-child a { border-bottom: none; }
+      .nav-hamburger {
+        display: flex; flex-direction: column; gap: 5px;
+        background: none; border: none; cursor: pointer; padding: 4px;
+      }
+      .nav-hamburger span { display: block; width: 22px; height: 2px; background: rgba(255,255,255,0.8); border-radius: 2px; }
     }
   </style>
 </head>
@@ -340,13 +363,16 @@
     </div>
     Digital Wellbeing
   </a>
-  <ul class="nav-links">
+  <ul class="nav-links" id="docsNavLinks">
     <li><a href="/#features">Features</a></li>
     <li><a href="/#how">How it works</a></li>
     <li><a href="/docs" class="active">Docs</a></li>
     <li><a href="https://github.com/Sainikhil-315/digital-wellbeing-desktop" target="_blank" rel="noopener">GitHub</a></li>
     <li><a href="/#download" class="nav-cta">Download</a></li>
   </ul>
+  <button class="nav-hamburger" id="docsHamburger" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
 <!-- ── DOCS LAYOUT ── -->
@@ -921,6 +947,15 @@
 </footer>
 
 <script>
+  // ── Hamburger menu ──
+  (function () {
+    const btn   = document.getElementById('docsHamburger');
+    const links = document.getElementById('docsNavLinks');
+    if (!btn || !links) return;
+    btn.addEventListener('click', () => links.classList.toggle('open'));
+    links.querySelectorAll('a').forEach(a => a.addEventListener('click', () => links.classList.remove('open')));
+  })();
+
   // ── Reading progress line ──
   const bar = document.getElementById('toc-progress')
   window.addEventListener('scroll', () => {
