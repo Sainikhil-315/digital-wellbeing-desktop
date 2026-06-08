@@ -188,6 +188,7 @@
         gap: 8px;
         list-style: none;
       }
+      .nav-hamburger { display: none; }
       .nav-links a {
         color: var(--text-muted);
         text-decoration: none;
@@ -965,9 +966,48 @@
         .timeline-wrapper { padding: 0 8px; }
         nav {
           padding: 12px 20px;
+          position: relative;
         }
         .nav-links {
           display: none;
+          position: absolute;
+          top: 100%;
+          left: 0; right: 0;
+          flex-direction: column;
+          background: rgba(8,8,24,0.97);
+          backdrop-filter: blur(20px);
+          border-top: 1px solid rgba(255,255,255,0.08);
+          padding: 16px 20px 20px;
+          gap: 4px;
+          z-index: 999;
+        }
+        .nav-links.open {
+          display: flex;
+        }
+        .nav-links a {
+          padding: 10px 0;
+          font-size: 15px;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-links li:last-child a {
+          border-bottom: none;
+        }
+        .nav-hamburger {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+        }
+        .nav-hamburger span {
+          display: block;
+          width: 22px;
+          height: 2px;
+          background: rgba(255,255,255,0.8);
+          border-radius: 2px;
+          transition: 0.2s;
         }
         .download-card {
           padding: 40px 24px;
@@ -1394,6 +1434,9 @@
         </li>
         <li><a href="#download" class="nav-cta">Download</a></li>
       </ul>
+      <button class="nav-hamburger" id="navHamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
     </nav>
 
     <!-- ── HERO ── -->
@@ -1805,6 +1848,15 @@
     </footer>
 
     <script>
+      // ── Hamburger menu ──
+      (function () {
+        const btn   = document.getElementById('navHamburger');
+        const links = document.querySelector('.nav-links');
+        if (!btn || !links) return;
+        btn.addEventListener('click', () => links.classList.toggle('open'));
+        links.querySelectorAll('a').forEach(a => a.addEventListener('click', () => links.classList.remove('open')));
+      })();
+
       // ── OS detection — Windows-only download ──
       (function () {
         const ua = navigator.userAgent;
