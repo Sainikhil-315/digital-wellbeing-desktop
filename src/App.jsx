@@ -3,7 +3,7 @@ import {
   IconLayoutDashboard,
   IconApps,
   IconClockPause,
-  IconReportAnalytics,
+  IconCalendarStats,
   IconSettings,
   IconMinus,
   IconCopy,
@@ -13,7 +13,7 @@ import './App.css'
 import Dashboard from './components/Dashboard.jsx'
 import AppUsage from './components/AppUsage.jsx'
 import AppLimits from './components/AppLimits.jsx'
-import Reports from './components/Reports.jsx'
+import WeeklyReport from './components/WeeklyReport.jsx'
 import Settings from './components/Settings.jsx'
 import UpdateBanner from './components/UpdateBanner.jsx'
 
@@ -47,7 +47,6 @@ const api = window.electronAPI || {
   getWeekComparison:    async () => ({ this_week_seconds: 0, last_week_seconds: 0, same_day_last_week_seconds: 0 }),
   getWeeklyHeatmap:     async () => ({ days: [], matrix: [] }),
   getWeeklyTopApps:     async () => [],
-  getReportData:        async () => ({ daily: [], top_apps: [], category_breakdown: [], weekday_hour_avg: Array.from({length:7},() => new Array(24).fill(0)), daily_groups: [] }),
 }
 
 class ErrorBoundary extends Component {
@@ -70,7 +69,7 @@ const NAV = [
   { id: 'dashboard', label: 'Dashboard',     icon: IconLayoutDashboard },
   { id: 'apps',      label: 'App Usage',     icon: IconApps },
   { id: 'limits',    label: 'App Limits',    icon: IconClockPause },
-  { id: 'reports',   label: 'Reports',       icon: IconReportAnalytics },
+  { id: 'weekly',    label: 'Weekly Report', icon: IconCalendarStats },
 ]
 
 export default function App() {
@@ -184,7 +183,7 @@ export default function App() {
               {tab === 'dashboard' && <Dashboard  api={api} refreshKey={refreshKey} />}
               {tab === 'apps'      && <AppUsage   api={api} refreshKey={refreshKey} />}
               {tab === 'limits'    && <AppLimits  api={api} refreshKey={refreshKey} onRefresh={refresh} />}
-              {tab === 'reports'   && <Reports api={api} refreshKey={refreshKey} />}
+              {tab === 'weekly'    && <WeeklyReport api={api} refreshKey={refreshKey} />}
               {tab === 'settings'  && <Settings   api={api} />}
             </ErrorBoundary>
           </div>
