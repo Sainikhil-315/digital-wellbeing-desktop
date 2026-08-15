@@ -114,10 +114,11 @@ app.whenReady().then(async () => {
 
   function startTrackerInterval(intervalMs) {
     if (trackerInterval) clearInterval(trackerInterval)
+    const intervalSeconds = intervalMs / 1000
     trackerInterval = setInterval(() => {
       tracker.pollActiveWindow((appName) => {
         if (appName) {
-          db.recordUsage(appName)
+          db.recordUsage(appName, intervalSeconds)
           if (appName !== lastTrackedApp) {
             db.recordAppFocus(appName)
             lastTrackedApp = appName
@@ -326,6 +327,7 @@ function setupIPC(db, startTrackerInterval) {
 
   ipcMain.handle('update-install', () => {
     const { autoUpdater } = require('electron-updater')
+    app.isQuitting = true
     autoUpdater.quitAndInstall()
   })
 

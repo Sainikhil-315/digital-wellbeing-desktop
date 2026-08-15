@@ -173,7 +173,7 @@ function run(sql, params = []) {
   }
 }
 
-function recordUsage(appName) {
+function recordUsage(appName, durationSeconds = 5) {
   const key = appName.toLowerCase()
   if (!knownAppsCache.has(key)) {
     const category = classifier.guessCategory(appName)
@@ -181,8 +181,8 @@ function recordUsage(appName) {
       [appName, category])
     knownAppsCache.add(key)
   }
-  run('INSERT INTO usage_log (app_name, date, timestamp, duration_seconds) VALUES (?, ?, ?, 5)',
-    [appName, today(), Date.now()])
+  run('INSERT INTO usage_log (app_name, date, timestamp, duration_seconds) VALUES (?, ?, ?, ?)',
+    [appName, today(), Date.now(), durationSeconds])
 }
 
 function recordAppFocus(appName) {
