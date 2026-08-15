@@ -769,21 +769,25 @@ function getReportData(rangeKey = '30d') {
 
   // Typical-week heatmap: hour x weekday, averaged over however many of each
   // weekday fall inside the range — stays a fixed 7x24 grid at any range length.
+  // Aggregated in SQL (not pulled row-by-row) since a long range can hold
+  // millions of raw usage_log rows at a 5s poll interval.
   const hourlyRows = query(`
-    SELECT date, timestamp, duration_seconds FROM usage_log
+    SELECT
+      CAST(strftime('%w', date) AS INTEGER) AS dow,
+      CAST(strftime('%H', timestamp / 1000, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+      SUM(duration_seconds) AS total_seconds
+    FROM usage_log
     WHERE date >= ? AND date <= ? AND ${buildExcludeClause('app_name')}
+    GROUP BY dow, hour
   `, [startDate, endDate])
   const sumMatrix = Array.from({ length: 7 }, () => new Array(24).fill(0))
-  const countedDates = new Set()
   const dowCounts = new Array(7).fill(0)
   for (const d of daily) {
     const dow = new Date(d.date + 'T00:00:00').getDay()
     dowCounts[dow]++
   }
   for (const row of hourlyRows) {
-    const dow = new Date(row.date + 'T00:00:00').getDay()
-    const hour = new Date(Number(row.timestamp)).getHours()
-    sumMatrix[dow][hour] += Number(row.duration_seconds)
+    sumMatrix[row.dow][row.hour] += Number(row.total_seconds)
   }
   const avgMatrix = sumMatrix.map((hours, dow) =>
     hours.map(secs => dowCounts[dow] ? Math.round(secs / dowCounts[dow]) : 0)
