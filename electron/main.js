@@ -13,6 +13,18 @@ let tray = null
 let trackerInterval = null
 const graceTimers = new Map() // appName → setTimeout id
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  })
+}
+
 
 function setupAutoUpdater() {
   if (isDev) return
