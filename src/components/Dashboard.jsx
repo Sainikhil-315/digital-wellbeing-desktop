@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { IconFlame, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { CATEGORY_COLORS, catColor } from '../categoryColors.js'
 import './Dashboard.css'
 
 function fmtSeconds(s) {
@@ -8,29 +9,6 @@ function fmtSeconds(s) {
   const m = Math.floor((s % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
-}
-
-const CAT_COLORS = {
-  browser:       '#4B8FE2',
-  development:   '#6366F1',
-  communication: '#2AADAD',
-  productivity:  '#5C9E2E',
-  entertainment: '#D4821A',
-  gaming:        '#E24B4A',
-  social:        '#BF5CBF',
-  utility:       '#8884A0',
-  work:          '#6366F1',
-  other:         '#48455A',
-}
-
-function catColor(categoryName) {
-  if (!categoryName) return CAT_COLORS.other
-  return CAT_COLORS[categoryName.toLowerCase()] || CAT_COLORS.other
-}
-
-function appColor(index) {
-  const palette = ['#6366F1','#E24B4A','#D4821A','#4B8FE2','#5C9E2E','#7C5CBF','#2AADAD']
-  return palette[index % palette.length]
 }
 
 function fmtTime(ts) {
@@ -145,6 +123,11 @@ export default function Dashboard({ api, refreshKey }) {
     const h = canvas.offsetHeight
     ctx.clearRect(0, 0, w, h)
 
+    const rootStyle = getComputedStyle(document.documentElement)
+    const mutedColor = rootStyle.getPropertyValue('--text-muted').trim() || '#48455A'
+    const gridColor = rootStyle.getPropertyValue('--border-bright').trim() || 'rgba(255,255,255,0.05)'
+    const emptyFill = rootStyle.getPropertyValue('--bg-hover').trim() || 'rgba(255,255,255,0.04)'
+
     const yAxisW = 36
     const xAxisH = 14
     const topPad = 10
@@ -159,7 +142,7 @@ export default function Dashboard({ api, refreshKey }) {
     ctx.textAlign = 'right'
     ;[0, 900, 1800, 2700, 3600].forEach(secs => {
       const yPx = topPad + chartH - (secs / maxV) * chartH
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)'
+      ctx.strokeStyle = gridColor
       ctx.lineWidth = 1
       ctx.setLineDash([3, 4])
       ctx.beginPath()
@@ -168,7 +151,7 @@ export default function Dashboard({ api, refreshKey }) {
       ctx.stroke()
       ctx.setLineDash([])
       const label = secs === 0 ? '0' : secs === 3600 ? '1h' : `${secs / 60}m`
-      ctx.fillStyle = '#48455A'
+      ctx.fillStyle = mutedColor
       ctx.fillText(label, yAxisW - 4, yPx + 3)
     })
 
@@ -178,10 +161,10 @@ export default function Dashboard({ api, refreshKey }) {
       const bh = Math.max((capped / maxV) * chartH, v > 0 ? 3 : 0)
       const x = yAxisW + i * (chartW / 24) + 1
       const y = topPad + chartH - bh
-      if (i > nowHr) ctx.fillStyle = 'rgba(255,255,255,0.04)'
-      else if (capped > maxV * 0.7) ctx.fillStyle = '#6366F1'
-      else if (v > 0) ctx.fillStyle = 'rgba(99,102,241,0.35)'
-      else ctx.fillStyle = 'rgba(255,255,255,0.04)'
+      if (i > nowHr) ctx.fillStyle = emptyFill
+      else if (capped > maxV * 0.7) ctx.fillStyle = '#2FD9A8'
+      else if (v > 0) ctx.fillStyle = 'rgba(47,217,168,0.35)'
+      else ctx.fillStyle = emptyFill
       ctx.beginPath()
       ctx.roundRect(x, y, barW, bh, 2)
       ctx.fill()
@@ -196,7 +179,7 @@ export default function Dashboard({ api, refreshKey }) {
         const bh = Math.max((capped / maxV) * chartH, 3)
         const px = yAxisW + peakHr * (chartW / 24) + barW / 2
         const py = topPad + chartH - bh - 5
-        ctx.fillStyle = '#6366F1'
+        ctx.fillStyle = '#2FD9A8'
         ctx.font = `bold 8px 'Space Mono'`
         ctx.textAlign = 'center'
         ctx.fillText('▲', px, py)
@@ -204,7 +187,7 @@ export default function Dashboard({ api, refreshKey }) {
     }
 
     // X labels
-    ctx.fillStyle = '#48455A'
+    ctx.fillStyle = mutedColor
     ctx.font = `9px 'Space Mono'`
     ctx.textAlign = 'center'
     ;[0, 6, 12, 18, 23].forEach(i => {
@@ -223,6 +206,10 @@ export default function Dashboard({ api, refreshKey }) {
     const w = canvas.offsetWidth
     const h = canvas.offsetHeight
     ctx.clearRect(0, 0, w, h)
+    const rootStyle = getComputedStyle(document.documentElement)
+    const surfaceColor = rootStyle.getPropertyValue('--bg-surface').trim() || '#0f0f1a'
+    const primaryTextColor = rootStyle.getPropertyValue('--text-primary').trim() || '#F0EDF8'
+    const secondaryTextColor = rootStyle.getPropertyValue('--text-secondary').trim() || '#8884A0'
     const r = Math.min(w, h) * 0.36
     const cx = r + 12
     const cy = h / 2
@@ -240,7 +227,7 @@ export default function Dashboard({ api, refreshKey }) {
       startAngle += sliceAngle
     })
     // donut hole
-    ctx.fillStyle = '#0f0f1a'
+    ctx.fillStyle = surfaceColor
     ctx.beginPath()
     ctx.arc(cx, cy, r * 0.52, 0, Math.PI * 2)
     ctx.fill()
@@ -256,7 +243,7 @@ export default function Dashboard({ api, refreshKey }) {
       ctx.roundRect(lx, ly, 8, 8, 2)
       ctx.fill()
       ctx.font = hoveredSlice === i ? `bold 10px "Space Mono"` : `10px "Space Mono"`
-      ctx.fillStyle = hoveredSlice === i ? '#F0EDF8' : '#8884A0'
+      ctx.fillStyle = hoveredSlice === i ? primaryTextColor : secondaryTextColor
       ctx.fillText(`${c.category}  ${pct}%`, lx + 13, ly + 8)
       ly += 18
     })
@@ -320,14 +307,46 @@ export default function Dashboard({ api, refreshKey }) {
     : null
 
   const metrics = [
-    { label: 'Today', val: fmtSeconds(stats?.today_seconds), sub: todayVsLastWeekDelta !== null ? `${todayVsLastWeekDelta >= 0 ? '+' : ''}${fmtSeconds(Math.abs(todayVsLastWeekDelta))} vs last week` : '—', subClass: todayVsLastWeekDelta !== null ? (todayVsLastWeekDelta > 0 ? 'bad' : 'good') : '', valClass: '' },
     { label: 'Weekly avg', val: fmtSeconds(stats?.weekly_avg_seconds), sub: weekComparison ? `last week ${fmtSeconds(Math.round(weekComparison.last_week_seconds / 7))}` : 'per day', subClass: '', valClass: '' },
     { label: 'Limit alerts', val: stats?.limit_alerts ?? 0, sub: 'limits triggered', subClass: stats?.limit_alerts > 0 ? 'bad' : '', valClass: stats?.limit_alerts > 0 ? 'val-red' : '' },
   ]
 
+  const ringPct = Math.max(0, Math.min(1, (stats?.today_seconds || 0) / (goalSeconds || 1)))
+  const ringColor = ringPct < 1 ? 'var(--accent)' : ringPct < 1.2 ? 'var(--amber)' : 'var(--red)'
+  const R = 42
+  const CIRC = 2 * Math.PI * R
+
   return (
     <div className="dashboard">
       <div className="metrics-row">
+        <div className="metric-card card-elevated ring-card">
+          <div className="ring-wrap">
+            <svg viewBox="0 0 100 100" className="ring-svg">
+              <circle cx="50" cy="50" r={R} className="ring-track" />
+              <circle
+                cx="50" cy="50" r={R}
+                className="ring-progress"
+                style={{
+                  stroke: ringColor,
+                  strokeDasharray: CIRC,
+                  strokeDashoffset: CIRC * (1 - Math.min(ringPct, 1)),
+                }}
+              />
+            </svg>
+            <div className="ring-center">
+              <div className="ring-val mono">{fmtSeconds(stats?.today_seconds)}</div>
+              <div className="ring-label">Today</div>
+            </div>
+          </div>
+          <div className="ring-side">
+            <div className="ring-goal-label">Goal {fmtSeconds(goalSeconds)}</div>
+            {todayVsLastWeekDelta !== null && (
+              <div className={`metric-sub ${todayVsLastWeekDelta > 0 ? 'bad' : 'good'}`}>
+                {todayVsLastWeekDelta >= 0 ? '+' : ''}{fmtSeconds(Math.abs(todayVsLastWeekDelta))} vs last week
+              </div>
+            )}
+          </div>
+        </div>
         {metrics.map((m, i) => (
           <div key={i} className="metric-card card-elevated">
             <div className="metric-label">{m.label}</div>
@@ -375,7 +394,7 @@ export default function Dashboard({ api, refreshKey }) {
           ) : (
             <div className="app-list">
               {usage.slice(0, 6).map((u, i) => {
-                const color = appColor(i)
+                const color = catColor(u.category)
                 const pct = Math.min(100, (u.total_seconds / maxUsage) * 100)
                 const trend = appTrends[u.app_name]
                 return (
@@ -402,8 +421,8 @@ export default function Dashboard({ api, refreshKey }) {
             <canvas ref={hourlyRef} className="hourly-canvas" />
           </div>
           <div className="hourly-legend">
-            <span><span className="legend-dot" style={{background:'#6366F1'}} />High usage</span>
-            <span><span className="legend-dot" style={{background:'rgba(99,102,241,0.35)'}} />Low usage</span>
+            <span><span className="legend-dot" style={{background:'#2FD9A8'}} />High usage</span>
+            <span><span className="legend-dot" style={{background:'rgba(47,217,168,0.35)'}} />Low usage</span>
           </div>
         </div>
       </div>
@@ -413,8 +432,7 @@ export default function Dashboard({ api, refreshKey }) {
           <div className="card-title">Time by category</div>
           <div className="cat-bar-track">
             {categoryBreakdown.map(cat => {
-              const key = (cat.category || 'other').toLowerCase()
-              const color = CAT_COLORS[key] || CAT_COLORS.other
+              const color = catColor(cat.category)
               return (
                 <div key={cat.category} className="cat-bar-seg"
                   style={{ width: `${(Number(cat.total_seconds) / catTotal) * 100}%`, background: color }}
@@ -425,8 +443,7 @@ export default function Dashboard({ api, refreshKey }) {
           </div>
           <div className="cat-legend">
             {categoryBreakdown.map(cat => {
-              const key = (cat.category || 'other').toLowerCase()
-              const color = CAT_COLORS[key] || CAT_COLORS.other
+              const color = catColor(cat.category)
               return (
                 <div key={cat.category} className="cat-legend-item">
                   <span className="cat-dot" style={{background: color}} />

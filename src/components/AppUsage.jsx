@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { IconChevronUp, IconChevronDown, IconSelector } from '@tabler/icons-react'
+import { catColor } from '../categoryColors.js'
 import './AppUsage.css'
 
 function fmtSeconds(s) {
@@ -15,23 +16,6 @@ const CATEGORIES = [
   'Browser', 'Development', 'Communication', 'Productivity',
   'Entertainment', 'Gaming', 'Social', 'Utility', 'Other',
 ]
-
-const CAT_COLORS = {
-  browser:       '#4B8FE2',
-  development:   '#6366F1',
-  communication: '#2AADAD',
-  productivity:  '#5C9E2E',
-  entertainment: '#D4821A',
-  gaming:        '#E24B4A',
-  social:        '#BF5CBF',
-  utility:       '#8884A0',
-  work:          '#6366F1',
-  other:         '#48455A',
-}
-
-function catColor(name) {
-  return CAT_COLORS[(name || '').toLowerCase()] || CAT_COLORS.other
-}
 
 export default function AppUsage({ api, refreshKey }) {
   const [apps, setApps]       = useState([])

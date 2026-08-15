@@ -362,5 +362,6 @@ function setupIPC(db, startTrackerInterval) {
   ipcMain.handle('get-week-comparison', () => db.getWeekComparison())
   ipcMain.handle('get-weekly-heatmap',  () => db.getWeeklyHeatmap())
   ipcMain.handle('get-weekly-top-apps', () => db.getWeeklyTopApps())
+  ipcMain.handle('get-report-data', (_, rangeKey) => db.getReportData(rangeKey))
   ipcMain.handle('set-app-category', (_, { app_name, category }) => db.setAppCategory(app_name, category))
 }

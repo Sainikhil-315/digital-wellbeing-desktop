@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   IconClock, IconBell, IconDatabase, IconInfoCircle,
-  IconBug, IconDownload,
+  IconBug, IconDownload, IconPalette, IconSun, IconMoon,
 } from '@tabler/icons-react'
 import './Settings.css'
 
@@ -36,6 +36,7 @@ const RETENTION_OPTIONS = [
 ]
 
 const NAV = [
+  { id: 'appearance',    label: 'Appearance',    Icon: IconPalette },
   { id: 'tracking',      label: 'Tracking',      Icon: IconClock },
   { id: 'notifications', label: 'Notifications', Icon: IconBell },
   { id: 'data',          label: 'Data',           Icon: IconDatabase },
@@ -61,6 +62,11 @@ export default function Settings({ api }) {
     setTimeout(() => setSaved(s => ({ ...s, [key]: false })), 2000)
   }
 
+  function setTheme(value) {
+    document.documentElement.setAttribute('data-theme', value)
+    save('theme', value)
+  }
+
   if (!settings) return <div className="settings-loading">Loading settings…</div>
 
   return (
@@ -80,6 +86,30 @@ export default function Settings({ api }) {
       </nav>
 
       <div className="settings-content">
+
+        {active === 'appearance' && (
+          <Section title="Appearance">
+            <Row title="Theme" desc="Choose how Digital Wellbeing looks">
+              <div className="theme-picker">
+                <button
+                  className={`theme-option ${(settings.theme || 'dark') === 'dark' ? 'selected' : ''}`}
+                  onClick={() => setTheme('dark')}
+                >
+                  <IconMoon size={16} />
+                  <span>Dark</span>
+                </button>
+                <button
+                  className={`theme-option ${settings.theme === 'light' ? 'selected' : ''}`}
+                  onClick={() => setTheme('light')}
+                >
+                  <IconSun size={16} />
+                  <span>Light</span>
+                </button>
+              </div>
+              <Saved show={saved.theme} />
+            </Row>
+          </Section>
+        )}
 
         {active === 'tracking' && (
           <Section title="Tracking">

@@ -132,6 +132,31 @@
 .s-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
 .s-select:disabled { opacity: 0.38; cursor: not-allowed; }
 
+/* ── Theme picker ── */
+.theme-picker {
+  display: flex;
+  gap: 8px;
+}
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast);
+}
+.theme-option:hover { color: var(--text-primary); background: var(--bg-hover); }
+.theme-option.selected {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--accent-dim);
+}
+
 /* ── Toggle switch ── */
 .s-toggle {
   width: 38px;
@@ -226,7 +251,7 @@
   padding: 36px 20px 28px;
   border-bottom: 1px solid var(--border);
   gap: 6px;
-  background: linear-gradient(180deg, rgba(99,102,241,0.06) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(47,217,168,0.06) 0%, transparent 100%);
 }
 .about-hero-dot {
   width: 10px;

@@ -2,7 +2,7 @@
 
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1.6fr 1fr 1fr;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -16,11 +16,73 @@
   margin-bottom: 8px;
 }
 .metric-val {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1;
+}
+
+/* ── Hero ring card (Today) ── */
+.ring-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.ring-wrap {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+}
+.ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.ring-track {
+  fill: none;
+  stroke: var(--bg-raised);
+  stroke-width: 8;
+}
+.ring-progress {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
+}
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.ring-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.ring-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ring-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ring-goal-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 .metric-val.val-red { color: var(--red); }
 .metric-sub {
@@ -245,7 +307,7 @@
   aspect-ratio: 1;
   border-radius: 4px;
   border: none;
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-raised);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -261,7 +323,7 @@
 .cal-day-num {
   font-size: 9px;
   font-weight: 600;
-  color: rgba(255,255,255,0.45);
+  color: var(--text-muted);
   line-height: 1;
 }
 .cal-day-time { display: none; }

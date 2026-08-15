@@ -102,9 +102,9 @@
   position: relative;
 }
 .nav-item i { font-size: 16px; flex-shrink: 0; }
-.nav-item:hover { background: rgba(99, 102, 241, 0.08); color: var(--text-primary); }
+.nav-item:hover { background: rgba(47, 217, 168, 0.08); color: var(--text-primary); }
 .nav-item.active {
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(47, 217, 168, 0.12);
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -254,13 +254,13 @@
 
 /* ── Accent card variant ── */
 .card-accent {
-  background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, var(--bg-glass) 60%);
+  background: linear-gradient(135deg, rgba(47,217,168,0.12) 0%, var(--bg-glass) 60%);
   backdrop-filter: var(--blur-glass);
   -webkit-backdrop-filter: var(--blur-glass);
-  border: 1px solid rgba(99,102,241,0.25);
+  border: 1px solid rgba(47,217,168,0.25);
   border-radius: var(--radius-lg);
   padding: 18px 20px;
-  box-shadow: 0 0 0 1px rgba(99,102,241,0.10), var(--shadow-card);
+  box-shadow: 0 0 0 1px rgba(47,217,168,0.10), var(--shadow-card);
   position: relative;
   overflow: hidden;
 }

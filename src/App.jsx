@@ -3,7 +3,7 @@ import {
   IconLayoutDashboard,
   IconApps,
   IconClockPause,
-  IconCalendarStats,
+  IconReportAnalytics,
   IconSettings,
   IconMinus,
   IconCopy,
@@ -13,7 +13,7 @@ import './App.css'
 import Dashboard from './components/Dashboard.jsx'
 import AppUsage from './components/AppUsage.jsx'
 import AppLimits from './components/AppLimits.jsx'
-import WeeklyReport from './components/WeeklyReport.jsx'
+import Reports from './components/Reports.jsx'
 import Settings from './components/Settings.jsx'
 import UpdateBanner from './components/UpdateBanner.jsx'
 
@@ -47,6 +47,7 @@ const api = window.electronAPI || {
   getWeekComparison:    async () => ({ this_week_seconds: 0, last_week_seconds: 0, same_day_last_week_seconds: 0 }),
   getWeeklyHeatmap:     async () => ({ days: [], matrix: [] }),
   getWeeklyTopApps:     async () => [],
+  getReportData:        async () => ({ daily: [], top_apps: [], category_breakdown: [], weekday_hour_avg: Array.from({length:7},() => new Array(24).fill(0)), daily_groups: [] }),
 }
 
 class ErrorBoundary extends Component {
@@ -69,7 +70,7 @@ const NAV = [
   { id: 'dashboard', label: 'Dashboard',     icon: IconLayoutDashboard },
   { id: 'apps',      label: 'App Usage',     icon: IconApps },
   { id: 'limits',    label: 'App Limits',    icon: IconClockPause },
-  { id: 'weekly',    label: 'Weekly Report', icon: IconCalendarStats },
+  { id: 'reports',   label: 'Reports',       icon: IconReportAnalytics },
 ]
 
 export default function App() {
@@ -84,6 +85,12 @@ export default function App() {
     const iv = setInterval(() => api.getStats().then(setStats).catch(() => {}), 30000)
     return () => clearInterval(iv)
   }, [refreshKey])
+
+  useEffect(() => {
+    api.getSettings().then(s => {
+      document.documentElement.setAttribute('data-theme', s?.theme === 'light' ? 'light' : 'dark')
+    }).catch(() => {})
+  }, [])
 
   function fmtSeconds(s) {
     if (!s) return '0m'
@@ -177,7 +184,7 @@ export default function App() {
               {tab === 'dashboard' && <Dashboard  api={api} refreshKey={refreshKey} />}
               {tab === 'apps'      && <AppUsage   api={api} refreshKey={refreshKey} />}
               {tab === 'limits'    && <AppLimits  api={api} refreshKey={refreshKey} onRefresh={refresh} />}
-              {tab === 'weekly'    && <WeeklyReport api={api} refreshKey={refreshKey} />}
+              {tab === 'reports'   && <Reports api={api} refreshKey={refreshKey} />}
               {tab === 'settings'  && <Settings   api={api} />}
             </ErrorBoundary>
           </div>

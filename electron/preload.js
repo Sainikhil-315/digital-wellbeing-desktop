@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWeekComparison: () => ipcRenderer.invoke('get-week-comparison'),
   getWeeklyHeatmap:  () => ipcRenderer.invoke('get-weekly-heatmap'),
   getWeeklyTopApps:  () => ipcRenderer.invoke('get-weekly-top-apps'),
+  getReportData:     (rangeKey) => ipcRenderer.invoke('get-report-data', rangeKey),
 
   onUpdateStatus: (callback) => {
     const handler = (_, data) => callback(data)
